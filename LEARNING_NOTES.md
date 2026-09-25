@@ -843,54 +843,86 @@ generators). Each links to the official Python docs.
 - **Lambda functions** — small anonymous one-line functions
   (`square = lambda x: x * x`), often used as a quick throwaway function
   passed to something like `sorted(key=...)`.
-  [Lambda expressions — Python docs](https://docs.python.org/3/reference/expressions.html#lambda)
+  [Lambda expressions — Python docs](https://docs.python.org/3/reference/expressions.html#lambda) ·
+  [How to Use Python Lambda Functions — Real Python](https://realpython.com/python-lambda/) ·
+  [How the Python Lambda Function Works — freeCodeCamp](https://www.freecodecamp.org/news/python-lambda-function-explained/)
 - **`*args` / `**kwargs` in ordinary functions** — you've seen `**args`
   used for cooperative `super()` calls in `pythonExercises4/zad1.py`, but
   it's a general-purpose feature for any function that needs to accept a
   variable number of positional (`*args`) or keyword (`**kwargs`)
-  arguments.
-  [Arbitrary argument lists — Python tutorial](https://docs.python.org/3/tutorial/controlflow.html#arbitrary-argument-lists)
+  arguments. `args`/`kwargs` are just **conventional names, not
+  keywords** — only the `*`/`**` actually matter; `def f(*vars, **options):`
+  behaves identically, everyone just uses `args`/`kwargs` by convention so
+  it's instantly recognizable.
+  [Arbitrary argument lists — Python tutorial](https://docs.python.org/3/tutorial/controlflow.html#arbitrary-argument-lists) ·
+  [Python args and kwargs: Demystified — Real Python](https://realpython.com/python-kwargs-and-args/) ·
+  [Clearing the Confusion Once and For All: args, kwargs, and Asterisks in Python — Bex T. (Medium)](https://medium.com/data-science/clearing-the-confusion-once-and-for-all-args-kwargs-and-asterisks-in-python-a905c36467a2) ·
+  [Python *args and **kwargs — Will Vincent](https://wsvincent.com/python-args-kwargs/)
 - **Extended iterable unpacking with `*`** — `first, *rest = [1, 2, 3, 4]`
   gives `first = 1`, `rest = [2, 3, 4]`. Same `*` used for `*args`, but
-  applied to assignment.
-  [Assignment statements — Python docs](https://docs.python.org/3/reference/simple_stmts.html#assignment-statements)
+  applied to assignment. The starred variable can sit anywhere
+  (`first, *middle, last = animals`), always collects into a `list`
+  regardless of what's being unpacked, and only one `*` is allowed per
+  assignment.
+  [Assignment statements — Python docs](https://docs.python.org/3/reference/simple_stmts.html#assignment-statements) ·
+  [Extended iterable unpacking — Python Morsels](https://www.pythonmorsels.com/extended-iterable-unpacking/) ·
+  [Unpacking with starred assignments — Pydon't (mathspp)](https://mathspp.com/blog/pydonts/unpacking-with-starred-assignments) ·
+  [PEP 3132 — Extended Iterable Unpacking](https://peps.python.org/pep-3132/)
 - **Dict and set comprehensions** — same idea as the list comprehensions
   already used (`pythonExercises2/zad1.py`), extended to `{}`:
   `{k: v for k, v in pairs}`, `{x * x for x in range(5)}`.
-  [Dictionaries — Python tutorial](https://docs.python.org/3/tutorial/datastructures.html#dictionaries)
+  [Dictionaries — Python tutorial](https://docs.python.org/3/tutorial/datastructures.html#dictionaries) ·
+  [Python Dictionary Comprehensions: How and When to Use Them — Real Python](https://realpython.com/python-dictionary-comprehension/) ·
+  [Python Set Comprehensions: How and When to Use Them — Real Python](https://realpython.com/python-set-comprehension/) ·
+  [Comprehensions in Python — GeeksforGeeks](https://www.geeksforgeeks.org/python/comprehensions-in-python/)
 - **`@staticmethod` / `@classmethod`** — sibling decorators to `@property`
   (already used in `pythonExercises4/zad3.py`). `@staticmethod` defines a
   method that doesn't need `self` at all (just namespaced under the
   class); `@classmethod` receives the class itself (`cls`) instead of an
   instance — often used for alternative constructors.
   [`staticmethod` — Python docs](https://docs.python.org/3/library/functions.html#staticmethod) ·
-  [`classmethod` — Python docs](https://docs.python.org/3/library/functions.html#classmethod)
+  [`classmethod` — Python docs](https://docs.python.org/3/library/functions.html#classmethod) ·
+  [Python's Instance, Class, and Static Methods Demystified — Real Python](https://realpython.com/instance-class-and-static-methods-demystified/) ·
+  [Class Method vs Static Method in Python — GeeksforGeeks](https://www.geeksforgeeks.org/python/class-method-vs-static-method-python/)
 - **Custom exceptions** — defining your own exception type by subclassing
   `Exception` (`class InsufficientFundsError(Exception): pass`), so
   callers can `except InsufficientFundsError:` specifically instead of a
   generic `except Exception:`/`except ValueError:` as done throughout the
   exercises so far.
-  [User-defined exceptions — Python tutorial](https://docs.python.org/3/tutorial/errors.html#user-defined-exceptions)
+  [User-defined exceptions — Python tutorial](https://docs.python.org/3/tutorial/errors.html#user-defined-exceptions) ·
+  [Defining Your Own Exceptions — Real Python](https://realpython.com/lessons/defining-your-own-exceptions/) ·
+  [How to Define Custom Exceptions in Python — Programiz](https://www.programiz.com/python-programming/user-defined-exception)
 - **`zip(iterable1, iterable2, ...)`** — pairs up elements from multiple
   iterables positionally, e.g. `zip(names, ages)` → pairs of
   `(name, age)`. Commonly combined with a dict comprehension:
   `{n: a for n, a in zip(names, ages)}`.
-  [`zip` — Python docs](https://docs.python.org/3/library/functions.html#zip)
+  [`zip` — Python docs](https://docs.python.org/3/library/functions.html#zip) ·
+  [Using the Python zip() Function for Parallel Iteration — Real Python](https://realpython.com/python-zip-function/) ·
+  [Python zip() Function — freeCodeCamp](https://www.freecodecamp.org/news/the-zip-function-in-python-explained-with-examples/)
 - **`import json`** — read/write JSON, the natural sibling to the `csv`
   module already used (`pythonExercises2/zad4.py`):
   `json.load(file)` / `json.dump(data, file)`.
-  [`json` — Python docs](https://docs.python.org/3/library/json.html)
+  [`json` — Python docs](https://docs.python.org/3/library/json.html) ·
+  [Working With JSON Data in Python — Real Python](https://realpython.com/python-json/) ·
+  [Python JSON: Read, Write, Parse JSON — Programiz](https://www.programiz.com/python-programming/json)
 - **`pathlib`** — an object-oriented, more modern alternative to the
   `os.path` functions already used throughout
   `pythonExercises2/zad1.py`/`zad3.py` (e.g. `Path(base_dir) / 'kopie'`
   instead of `os.path.join`, `.exists()`, `.is_dir()` as methods instead
   of `os.path.exists()`/`os.path.isdir()`).
-  [`pathlib` — Python docs](https://docs.python.org/3/library/pathlib.html)
+  [`pathlib` — Python docs](https://docs.python.org/3/library/pathlib.html) ·
+  [Python's pathlib Module: Taming the File System — Real Python](https://realpython.com/python-pathlib/) ·
+  [Pathlib Module in Python — GeeksforGeeks](https://www.geeksforgeeks.org/python/pathlib-module-in-python/)
 - **f-string format specs** — beyond plain `f"{value}"`, a mini
   language after `:` controls formatting, e.g. `f"{price:.2f}"` (2
   decimal places) as a more direct alternative to the `round()` calls
   used throughout the earlier exercises.
-  [Format specification mini-language — Python docs](https://docs.python.org/3/library/string.html#format-specification-mini-language)
+  [Format specification mini-language — Python docs](https://docs.python.org/3/library/string.html#format-specification-mini-language) ·
+  [Python's Format Mini-Language for Tidy Strings — Real Python](https://realpython.com/python-format-mini-language/) ·
+  [Python's F-String for String Interpolation and Formatting — Real Python](https://realpython.com/python-f-strings/) ·
+  [Python f-string — formatting strings in Python with f-string — ZetCode](https://zetcode.com/python/fstring/) ·
+  [String Alignment in Python f-string — GeeksforGeeks](https://www.geeksforgeeks.org/python/string-alignment-in-python-f-string/) ·
+  [Guide to String Formatting in Python Using F-strings — Built In](https://builtin.com/data-science/python-f-string)
 
 ## 2026-09-25 — Practice tasks
 
