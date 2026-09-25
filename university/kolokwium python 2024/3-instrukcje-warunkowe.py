@@ -1,5 +1,5 @@
 a = 7 if 5 > 6 else 9
-print(9)
+print(a)
 
 b = 'test1' if 'a' in 'abc' else 'test2'
 print(b)

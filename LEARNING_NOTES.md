@@ -924,6 +924,325 @@ generators). Each links to the official Python docs.
   [String Alignment in Python f-string — GeeksforGeeks](https://www.geeksforgeeks.org/python/string-alignment-in-python-f-string/) ·
   [Guide to String Formatting in Python Using F-strings — Built In](https://builtin.com/data-science/python-f-string)
 
+## 2026-09-25 — `2-liczby.py` (university/kolokwium python 2024)
+
+A set of commented-out numeric demo snippets (not a runnable script — each
+block meant to be uncommented individually). Understood, concepts for
+reference:
+
+```python
+print(int(1.9))    # 1
+print(int(-1.9))   # -1
+
+a = 0b1             # binary literal: 1
+a = a << 2          # left shift: 1 << 2 = 4
+print(bin(a))       # '0b100'
+a <<= 1              # augmented shift assignment: a = a << 1
+
+a = 0b100
+b = 0b1000
+a | b                # bitwise OR
+a & b                # bitwise AND
+a ^ b                # bitwise XOR
+
+import math
+math.sqrt(5)
+-5 ** 0.5            # note: -(5 ** 0.5), NOT (-5) ** 0.5 — unary minus
+                     # binds *after* **, so this is -2.236..., not a
+                     # complex/error result
+math.sqrt(-5)        # ValueError: math domain error
+```
+
+- **`int(x)` on a float truncates toward zero**, it doesn't round:
+  `int(1.9) == 1`, `int(-1.9) == -1` (not `-2`) — different from `round()`.
+- **`0b...` binary literals** — write an integer directly in binary,
+  e.g. `0b100 == 4`. **`bin(x)`** does the reverse: converts an `int` to
+  its `'0b...'` string representation.
+- **Bit-shift operators `<<`/`>>`** — shift bits left/right (`x << n`
+  multiplies by `2**n`). **`<<=`** is the same augmented-assignment
+  pattern as `+=`/`*=` seen earlier, applied to shifting.
+- **Bitwise operators `|` (OR), `&` (AND), `^` (XOR)** — operate on the
+  binary representation of integers bit-by-bit. Distinct from the logical
+  `or`/`and` used everywhere else in the exercises so far, which operate
+  on whole truthy/falsy values, not individual bits.
+- **Operator precedence gotcha: `-5 ** 0.5`** — `**` binds *tighter* than
+  unary `-`, so this parses as `-(5 ** 0.5)`, not `(-5) ** 0.5`. Matters
+  here because `(-5) ** 0.5` would involve a square root of a negative
+  number.
+- **`math.sqrt(-5)` raises `ValueError`** — the `math` module only works
+  with real numbers; there's a separate `cmath` module for complex-number
+  math that would return a complex result instead of erroring.
+
+## 2026-09-25 — `2-liczby-dodatek.py` (university/kolokwium python 2024)
+
+Demonstrates Python's alternative numeric types beyond plain `int`/`float`.
+Understood, concepts for reference (actual output shown, verified by
+running the script):
+
+```python
+from fractions import Fraction
+
+Fraction(1, 3) + Fraction(4, 5)              # 17/15 — exact rational arithmetic
+Fraction(2.3).limit_denominator(10 ** 14)    # 23/10 — simplifies float's messy exact binary value
+                                              #         to the nearest simple fraction
+```
+- **`Fraction`** — exact rational numbers (numerator/denominator), no
+  binary floating-point rounding error. `Fraction(2.3)` on its own would
+  be a huge, ugly fraction (float `2.3` isn't exactly representable in
+  binary); `.limit_denominator(n)` finds the closest "nice" fraction with
+  denominator ≤ `n`. Mixing a `Fraction` with a plain `float` in `+`
+  converts the result back to `float` (`Fraction(23,10) + 0.2 == 2.5`).
+
+```python
+import decimal
+0.2 + 0.1                                    # 0.30000000000000004 — binary float rounding error
+decimal.Decimal('0.2') + decimal.Decimal('0.1')  # 0.3 — exact
+decimal.Decimal('0.1')                       # 0.1 — exact, built from the string
+decimal.Decimal(0.1)                         # 0.1000000000000000055511151231257827021181583404541015625
+                                              # — built from the float, exposes its true imprecise binary value
+decimal.getcontext().prec = 2
+decimal.Decimal(1) / decimal.Decimal(3)      # 0.33 — precision is now a global context setting
+```
+- **`decimal.Decimal`** — exact base-10 arithmetic, avoiding the classic
+  `0.1 + 0.2 != 0.3` binary floating-point problem. **Construct from a
+  string** (`Decimal('0.1')`) for an exact value; constructing **from a
+  float** (`Decimal(0.1)`) instead exposes the float's actual imprecise
+  binary representation, since the imprecision already happened before
+  `Decimal` ever saw it.
+  - `decimal.getcontext().prec = n` sets **global** precision (significant
+    digits) for all subsequent `Decimal` arithmetic in the program.
+  - `Decimal(...).as_integer_ratio()` — converts to an exact fraction
+    tuple, e.g. `Decimal('2.6').as_integer_ratio()` → `(13, 5)`.
+
+```python
+complex('1+2j')   # (1+2j) — parsed from a string
+2j                 # (0+2j) — imaginary literal, suffix j
+1 + 2j             # (1+2j)
+x = complex('1+2j')
+x.real             # 1.0
+x.imag             # 2.0
+```
+- **`complex`** — Python's built-in complex number type (`j` suffix for
+  the imaginary part, like `i` in math but Python uses `j` — an
+  engineering convention). `.real`/`.imag` extract the two components as
+  `float`s.
+
+```python
+float('inf')       # inf
+5 + float('inf')   # inf — anything + infinity is infinity
+float('nan')       # nan
+float('inf') + float('nan')   # nan — nan "poisons" any arithmetic it touches
+float('-inf') + float('inf')  # nan — indeterminate form (∞ − ∞)
+```
+- **`float('inf')` / `float('-inf')` / `float('nan')`** — special
+  floating-point values for infinity and "not a number" (e.g. the result
+  of an undefined operation). `nan` propagates through any arithmetic
+  it's involved in.
+
+```python
+divmod(10, 3)   # (3, 1) — (quotient, remainder) in one call
+```
+- **`divmod(a, b)`** — returns a tuple of `(a // b, a % b)` in a single
+  call, instead of computing floor-division and modulo separately.
+
+## 2026-09-25 — `3 - list comprehension.py` (university/kolokwium python 2024)
+
+Goes further than the list comprehensions seen so far (a single `for` +
+optional single `if`, e.g. `pythonExercises/zad4.py`). Understood,
+concepts for reference (verified against actual output):
+
+```python
+tab = [a * 2 for a in range(10)]
+# [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+```
+- Basic transform-only comprehension (no filter) — same shape as before,
+  just multiplying instead of filtering.
+
+```python
+tab2 = [(a, b) for a in (1, 2, 3) for b in (1, 2)]
+# [(1, 1), (1, 2), (2, 1), (2, 2), (3, 1), (3, 2)]
+```
+- **Multiple `for` clauses in one comprehension** — equivalent to nested
+  `for` loops, left-to-right (`a` is the *outer* loop, `b` the *inner*
+  one — `b` cycles fully for each `a`, same order as writing two nested
+  `for` statements). Produces the Cartesian product of the two ranges
+  here, built into tuples with `(a, b)`.
+
+```python
+tab4 = [(a, b) for a in range(1, 10) if a > 2
+                for b in range(1, 10) if a % b == 0 and a != b and b != 1]
+tab5 = [(a, b) for a in range(1, 10) if a > 2
+                for b in range(1, 10) if a % b == 0 if a != b if b != 1]
+# both produce: [(4, 2), (6, 2), (6, 3), (8, 2), (8, 4), (9, 3)]
+```
+- **`for`+`if` clauses can be chained/repeated** — each `for` can have
+  its own `if` filter attached, applied at that nesting level (here:
+  filter `a` first, *then* loop/filter `b` for each surviving `a`) —
+  not one single filter applied at the very end.
+- **Multiple consecutive `if` clauses = implicit `and`.** `tab5` proves
+  `if cond1 if cond2 if cond3` behaves identically to one
+  `if cond1 and cond2 and cond3` (`tab4`) — same output either way; just
+  a stylistic choice for how to write several combined conditions.
+
+```python
+tab6 = [x for x in range(100) if 1024 in [x ** k for k in range(1, 11)]]
+# [2, 4, 32]
+```
+- **A comprehension nested inside another comprehension's `if` clause.**
+  For each `x` from 0–99, the inner comprehension
+  `[x ** k for k in range(1, 11)]` builds a list of `x` raised to every
+  power 1–10; the outer `if 1024 in [...]` keeps `x` only if `1024`
+  appears somewhere in that list of powers. Result: `2` (2¹⁰ = 1024),
+  `4` (4⁵ = 1024), `32` (32² = 1024) — every `x` that has *some* integer
+  exponent (1–10) landing exactly on 1024.
+
+## 2026-09-25 — `3-instrukcje-warunkowe.py` (university/kolokwium python 2024)
+
+```python
+a = 7 if 5 > 6 else 9          # 9
+b = 'test1' if 'a' in 'abc' else 'test2'      # 'test1'
+c = 'test3' if 'a' not in 'abc' else 'test4'  # 'test4'
+```
+
+- **Ternary conditional expression** (`x if cond else y`) — a full
+  `if/else` compressed into a single expression that evaluates to a
+  value, rather than a statement that runs a block. Equivalent to JS's
+  `cond ? x : y`, just with the condition in the middle instead of first.
+  This is exactly what makes a conditional possible *inside* a `lambda`
+  (which can only contain one expression, no statements) — e.g.
+  `lambda x: 'pos' if x > 0 else 'neg'`.
+- **`in` / `not in` on a string checks substring presence**, not just
+  element membership. `'a' in 'abc'` asks "does `'a'` appear anywhere
+  inside `'abc'`?" — same `in` operator already used for list/dict
+  membership (`pythonExercises2/zad1.py`), just applied to strings, where
+  it means "is this a substring" rather than "is this exactly one
+  element." `not in` is the direct negation of that check.
+
+## 2026-09-25 — `3-lancuchy znakow.py` (university/kolokwium python 2024)
+
+Dense file covering a lot of string-specific ground. Understood, concepts
+for reference (verified against actual output):
+
+```python
+multiline = """line1
+line2
+line3"""
+```
+- **Triple-quoted strings (`"""..."""`)** — span multiple lines literally,
+  newlines included as-is. Same syntax also doubles as the multi-line
+  docstring convention (not used for that here, just as a plain string).
+
+```python
+t1 = '\temp'     # '\temp' → actually a TAB + "emp" ('\t' is an escape sequence)
+t2 = '\\temp'    # a literal backslash + "temp" (escaped backslash)
+t3 = r'\temp'    # a raw string: '\t' is NOT treated as an escape — literal backslash-t-e-m-p
+```
+- **Escape sequences** (`\t`, `\n`, etc.) inside normal strings vs.
+  **raw strings** (`r'...'`), where backslashes are left completely
+  literal — useful for things like Windows paths or regex patterns where
+  you don't want `\` interpreted specially.
+
+```python
+a = 'tekst testowy'
+a[:2] + a[3:8] + 'k' + a[8:]   # 'te' + 'st te' + 'k' + 'testowy' = 'test tekstowy'
+```
+- Building a new string by **concatenating slices around a "hole"** —
+  effectively replacing the character at index 2 (`'k'`) with a different
+  `'k'` by skipping it in the slices and inserting it manually. Strings
+  are immutable, so this is how you get a "modified" string — you can
+  never mutate one in place.
+
+```python
+d = "tekst"
+d += ' nowy'    # 'tekst nowy' — string concatenation via +=
+d *= 2          # 'tekst nowytekst nowy' — string REPEATED, via *=
+```
+- **`+=`/`*=` on strings** — same augmented-assignment operators seen on
+  numbers (`pythonExercises/zad3.py`) and instance attributes
+  (`pythonExercises3/zad2.py`), here doing string concatenation and
+  **repetition** (`str * int` repeats the string `int` times).
+
+```python
+ord('a')   # 97 — character → its Unicode code point (int)
+chr(98)    # 'b' — code point (int) → character
+```
+- **`ord()` / `chr()`** — convert between a single character and its
+  numeric Unicode code point, inverse of each other.
+
+```python
+s = 'ala ma kota'
+'ma' in s          # True — substring check (see 3-instrukcje-warunkowe.py)
+s.find('ma')       # 4 — index of first match, or -1 if not found
+s = (s + "\n").rstrip()   # strips trailing whitespace/newline only
+s.upper() / s.lower()     # 'ALA MA KOTA' / 'ala ma kota'
+'*'.join(s.split())       # 'ala*ma*kota' — split() with no args splits on any whitespace run
+s.startswith('ala')       # True
+```
+- **`str.find(sub)`** — like `in` but returns the **index** of the first
+  match (or `-1` if absent) instead of just `True`/`False`.
+- **`str.rstrip()`** — strips whitespace from the **right side only**
+  (there's also `.lstrip()` for left-only); `.strip()` (used earlier in
+  `pythonExercises2/zad2.py`) does both sides.
+- **`str.split()` with no argument** — splits on *any* run of whitespace
+  (spaces, tabs, newlines), unlike `str.split(",")` (used in
+  `pythonExercises/zad4.py`) which splits on one exact separator.
+- **`str.startswith(prefix)`** — the mirror of `str.endswith(...)`
+  (used in `pythonExercises2/zad1.py`).
+
+```python
+city = "łódź"          # Python 3 strings are Unicode by default — non-ASCII just works
+source = "kraków"
+u = source.encode('utf8')          # b'krak\xc3\xb3w' — str → bytes
+type(u)                            # <class 'bytes'>
+b = source.encode('iso-8859-2')    # b'krak\xf3w' — different encoding → different bytes!
+result = source + u.decode('utf8') # bytes → str again, THEN concatenate
+# source + u directly would raise TypeError — can't mix str and bytes with +
+```
+- **`str.encode(encoding)`** — converts text (`str`) into raw
+  **`bytes`**, using a specific text encoding (`utf8`, `iso-8859-2`,
+  etc.). The *same* string produces *different* byte sequences depending
+  on encoding — there's no one universal "the bytes of this string,"
+  encoding is always part of the deal.
+- **`bytes.decode(encoding)`** — the inverse: raw bytes → text, given the
+  encoding they were written in (get this wrong and you get garbled text
+  or an error).
+- **`str` and `bytes` are distinct types that can't be mixed with `+`** —
+  matches the earlier "Python won't silently coerce between unrelated
+  types" behavior from the type-system notes; you must explicitly
+  `.decode()` bytes back to `str` first.
+
+```python
+str(234), repr(234)     # '234', '234'  — same for plain numbers
+str('abc'), repr('abc') # 'abc', "'abc'" — repr() includes the quotes
+```
+- **`str()` vs `repr()`** — `str()` gives the human-readable display
+  form; `repr()` gives an unambiguous, "as valid Python source as
+  possible" form — for a string, that means the quotes are included, so
+  you can see it *is* a string (matters more once nested inside other
+  structures, e.g. printing a `list` of strings shows each one via
+  `repr()`).
+
+```python
+'first value %s, second value %s' % (r1, r2)   # old %-style formatting
+'number value is %.2f' % math.pi                # %.2f → 2 decimal places
+'value = %10d' % n1                              # %10d → right-align in a width-10 field
+
+'{0} - {1} - {1} - {0}'.format('ala', 'kota')          # positional placeholders, reusable
+'{0} - {1!r} - {1!s} - {0}'.format('ala', 'kota')      # !r forces repr(), !s forces str()
+```
+- **`%`-style string formatting** — an older formatting mechanism
+  (`'%s'`, `'%.2f'`, `'%10d'` etc., printf-style from C) predating both
+  `.format()` and f-strings. You'll still encounter it in older codebases
+  and some logging APIs.
+- **`str.format()`** — the formatting method that came before f-strings;
+  `{0}`/`{1}` are positional placeholders (reusable — `{1}` can appear
+  twice), and `!r`/`!s` force a value through `repr()`/`str()`
+  specifically inside the placeholder.
+- All three formatting styles (`%`, `.format()`, f-strings) coexist in
+  Python; f-strings (used throughout the exercises so far) are the
+  modern preferred choice, but the other two are common enough in
+  existing code to be worth recognizing.
+
 ## 2026-09-25 — Practice tasks
 
 Self-directed exercises combining concepts from `university/pythonWSEI/`

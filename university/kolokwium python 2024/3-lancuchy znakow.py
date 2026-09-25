@@ -17,6 +17,7 @@ print(a[3])
 print(a[5:])
 print(a[:-3])
 b = a[:]
+print("---")
 print(b)
 print(b[4::-3])
 print(b[8:2:-2])
