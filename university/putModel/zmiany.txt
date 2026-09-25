@@ -1,0 +1,11 @@
+ulepszenia:
+- pandas.DataFrame.hist - rysuje histogram przy pomocy matplotlib.pyplot.hist()
+- pandas.cut - dodana wartość include_lowest, żeby uwzględnić 0
+- pandas.DataFrame.align - outer join 2 data framów
+- informacja Dense(activation='softmax') - dobre dla klasyfikacji wieloklasowej, zwraca wartosci pomiedzy 0, a 1 (dla różnych klas), ktore sumuja sie do 1
+- keras.optimizers.Adam - optymizer implementujący algorytm Adama, który jest jedną z metod obliczania stochastycznego spadku wzdłóż gradientu,
+opierającą się na adaptacyjnej estymacji momentów pierwszego i drugiego stopnia. Zgodnie z dokumentacją kerasa, jest to dobry optymizer dla danych które są bardzo liczne
+lub posiadają wiele parametrów
+- EarlyStopping - funkcja zaimportowana z kerasa, mająca na celu wcześniejsze przerwanie uczenia modelu, w naszym przypadku aktywuje się,
+gdy wartość funkcji straty przestaje maleć dla zbioru walidacyjnego
+
