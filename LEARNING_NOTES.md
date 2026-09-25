@@ -833,3 +833,207 @@ for _ in range(5):
 - **`_` as a loop variable** — conventional name meaning "I don't need
   this value," used when a loop only cares about *how many times* to
   repeat (`for _ in range(5):`), not the current item.
+
+## 2026-09-25 — Concepts not yet covered, similar difficulty level
+
+Natural next topics given everything above (functions, `try/except`,
+comprehensions, file I/O, classes/inheritance/`@property`/dunders,
+generators). Each links to the official Python docs.
+
+- **Lambda functions** — small anonymous one-line functions
+  (`square = lambda x: x * x`), often used as a quick throwaway function
+  passed to something like `sorted(key=...)`.
+  [Lambda expressions — Python docs](https://docs.python.org/3/reference/expressions.html#lambda)
+- **`*args` / `**kwargs` in ordinary functions** — you've seen `**args`
+  used for cooperative `super()` calls in `pythonExercises4/zad1.py`, but
+  it's a general-purpose feature for any function that needs to accept a
+  variable number of positional (`*args`) or keyword (`**kwargs`)
+  arguments.
+  [Arbitrary argument lists — Python tutorial](https://docs.python.org/3/tutorial/controlflow.html#arbitrary-argument-lists)
+- **Extended iterable unpacking with `*`** — `first, *rest = [1, 2, 3, 4]`
+  gives `first = 1`, `rest = [2, 3, 4]`. Same `*` used for `*args`, but
+  applied to assignment.
+  [Assignment statements — Python docs](https://docs.python.org/3/reference/simple_stmts.html#assignment-statements)
+- **Dict and set comprehensions** — same idea as the list comprehensions
+  already used (`pythonExercises2/zad1.py`), extended to `{}`:
+  `{k: v for k, v in pairs}`, `{x * x for x in range(5)}`.
+  [Dictionaries — Python tutorial](https://docs.python.org/3/tutorial/datastructures.html#dictionaries)
+- **`@staticmethod` / `@classmethod`** — sibling decorators to `@property`
+  (already used in `pythonExercises4/zad3.py`). `@staticmethod` defines a
+  method that doesn't need `self` at all (just namespaced under the
+  class); `@classmethod` receives the class itself (`cls`) instead of an
+  instance — often used for alternative constructors.
+  [`staticmethod` — Python docs](https://docs.python.org/3/library/functions.html#staticmethod) ·
+  [`classmethod` — Python docs](https://docs.python.org/3/library/functions.html#classmethod)
+- **Custom exceptions** — defining your own exception type by subclassing
+  `Exception` (`class InsufficientFundsError(Exception): pass`), so
+  callers can `except InsufficientFundsError:` specifically instead of a
+  generic `except Exception:`/`except ValueError:` as done throughout the
+  exercises so far.
+  [User-defined exceptions — Python tutorial](https://docs.python.org/3/tutorial/errors.html#user-defined-exceptions)
+- **`zip(iterable1, iterable2, ...)`** — pairs up elements from multiple
+  iterables positionally, e.g. `zip(names, ages)` → pairs of
+  `(name, age)`. Commonly combined with a dict comprehension:
+  `{n: a for n, a in zip(names, ages)}`.
+  [`zip` — Python docs](https://docs.python.org/3/library/functions.html#zip)
+- **`import json`** — read/write JSON, the natural sibling to the `csv`
+  module already used (`pythonExercises2/zad4.py`):
+  `json.load(file)` / `json.dump(data, file)`.
+  [`json` — Python docs](https://docs.python.org/3/library/json.html)
+- **`pathlib`** — an object-oriented, more modern alternative to the
+  `os.path` functions already used throughout
+  `pythonExercises2/zad1.py`/`zad3.py` (e.g. `Path(base_dir) / 'kopie'`
+  instead of `os.path.join`, `.exists()`, `.is_dir()` as methods instead
+  of `os.path.exists()`/`os.path.isdir()`).
+  [`pathlib` — Python docs](https://docs.python.org/3/library/pathlib.html)
+- **f-string format specs** — beyond plain `f"{value}"`, a mini
+  language after `:` controls formatting, e.g. `f"{price:.2f}"` (2
+  decimal places) as a more direct alternative to the `round()` calls
+  used throughout the earlier exercises.
+  [Format specification mini-language — Python docs](https://docs.python.org/3/library/string.html#format-specification-mini-language)
+
+## 2026-09-25 — Practice tasks
+
+Self-directed exercises combining concepts from `university/pythonWSEI/`
+with the additional concepts above. No solutions written down — attempt
+independently, ask for a review/hints when stuck.
+
+1. **Library system (classes, `@property`, dunders, custom exceptions).**
+   Build a `Book` class (`title`, `author`, `pages`, `is_borrowed`) using
+   `@property` for controlled access, `__str__` for a readable
+   description, and `__len__` returning `pages`. Build a `Library` class
+   holding a `dict` of books keyed by title. Define a custom
+   `BookNotAvailableError(Exception)` and `raise` it from a `borrow(title)`
+   method if the book is already borrowed or doesn't exist. Add a method
+   returning a list of currently available books using a list
+   comprehension.
+
+2. **Fibonacci generator (generators, comprehensions, `sum`).** Write a
+   generator function `fibonacci()` that `yield`s Fibonacci numbers
+   forever (like the infinite `while True:` + `yield` pattern from
+   `pythonExercises4/zad4.py`, but without the retry-until-valid logic).
+   Then, without ever converting it to a full list, use it to compute the
+   sum of all *even* Fibonacci numbers below 4,000,000 (stop pulling from
+   the generator once you pass the limit).
+
+3. **CSV/JSON report tool (file I/O, `csv`/`json`, `statistics`, custom
+   context manager).** Read a CSV of records (e.g. products with a price
+   column, similar shape to `pythonExercises/zad4.py`'s product/price
+   pairs), compute `mean`/`median` price with the `statistics` module, and
+   write the results out as a JSON file. Wrap the "start/end of
+   processing" with your own context manager (a class with
+   `__enter__`/`__exit__`, or `@contextlib.contextmanager`) that prints a
+   timestamped start/end message — read up on context managers beyond
+   `with open(...)` first, since this task needs a custom one.
+
+4. **Mixins and multiple inheritance (MRO, `**kwargs` cooperation).**
+   Write two small "mixin" classes: `LoggableMixin` (a `log(message)`
+   method that prints with a timestamp) and `ComparableMixin` (implements
+   `__eq__`/`__lt__` by comparing some attribute you decide on). Combine
+   both into one class via multiple inheritance, alongside a base class
+   with its own `__init__`, following the same cooperative `**kwargs`
+   `super().__init__()` relay pattern from `pythonExercises4/zad1.py` so
+   construction works correctly. Verify with `YourClass.__mro__`.
+
+5. **Flexible aggregator function (`*args`, `**kwargs`, `zip`, lambdas).**
+   Write a function `summarize(*args, **kwargs)` that accepts any number
+   of numeric positional arguments and computes their sum/average, with
+   optional keyword arguments like `round_to=2` (using an f-string format
+   spec or `round()`) and `label="Result"` for the printed output. Then
+   write a second function that takes two lists of equal length (names
+   and values) and uses `zip()` + a dict comprehension to build a
+   `{name: value}` mapping, sorted by value using
+   `sorted(..., key=lambda ...)`.
+
+## 2026-09-25 — Python's type system
+
+Comparisons below are to JS/TS since that's the reference point so far.
+
+### Dynamic typing — variables aren't typed, values are
+
+A variable name can be rebound to any type at any time; nothing is
+declared up front:
+```python
+x = 5
+x = "now a string"   # totally legal
+x = [1, 2, 3]         # legal again
+```
+This is like JS `let x = 5; x = "now a string";` (not like TS, which
+would reject that reassignment under a static type annotation). Python
+has no `let`/`const`/type keyword — just `name = value`.
+
+### Strong typing — but no silent coercion between unrelated types
+
+"Dynamic" is not the same as "loose." Python won't silently convert
+between incompatible types the way JS does:
+```python
+"5" + 5      # TypeError: can only concatenate str (not "int") to str
+```
+vs JS: `"5" + 5` → `"55"` (silent coercion). This is exactly why
+`int(age)` / `float(money)` conversions showed up constantly in the
+`pythonExercises` files — Python requires you to convert explicitly
+before combining `str` and numeric values, rather than doing it for you.
+
+### The core built-in types
+
+| Type | Example | Mutable? | Notes |
+|---|---|---|---|
+| `int` | `5` | — (immutable) | arbitrary precision, no overflow |
+| `float` | `3.14` | — | |
+| `bool` | `True`/`False` | — | subtype of `int` (`True == 1`) |
+| `str` | `"abc"` | — | immutable — `s[0] = 'x'` fails |
+| `NoneType` | `None` | — | Python's `null`/`undefined` equivalent |
+| `list` | `[1, 2, 3]` | **yes** | `.append()`, item assignment work |
+| `tuple` | `(1, 2, 3)` | — | fixed once created (covered earlier, in the `zad1.py` follow-up above) |
+| `dict` | `{'a': 1}` | **yes** | keys must be hashable (immutable-ish) |
+| `set` | `{1, 2, 3}` | **yes** | unordered, no duplicates |
+| `frozenset` | `frozenset({1,2})` | — | immutable version of `set` |
+
+**Mutable vs immutable matters a lot** in Python — it's why a `list`
+can't be a `dict` key/`set` member but a `tuple` can (immutable →
+hashable), and why reassigning `self.__x = 0` then `self.__x += distance`
+in `pythonExercises3/zad2.py` actually rebinds `__x` to a *new* `int`
+each time rather than mutating the old one in place (`int` is immutable).
+
+### Checking types at runtime
+
+- **`type(x)`** — returns the exact type object, e.g. `type(5)` → `<class 'int'>`.
+- **`isinstance(x, SomeType)`** — checks if `x` is that type *or a
+  subclass of it* (already used in `pythonExercises4/zad2.py`'s
+  `__add__` to validate `other`). Prefer `isinstance()` over `type() ==`
+  for this reason — it respects inheritance.
+
+### Duck typing — Python cares what an object *can do*, not what it *is*
+
+Python usually doesn't check types explicitly at all — it just tries the
+operation, and if the object supports it, it works. This is exactly what
+was going on with PyCharm's inferred `{__le__, __add__}` hints in
+`pythonExercises3/zad1.py`: Python doesn't care that a parameter is
+"officially" an `int` — it only cares that whatever's passed in supports
+`<=` (has `__le__`) and `+` (has `__add__`). "If it walks like a duck and
+quacks like a duck..." — any object implementing the right dunder methods
+can be used, regardless of its declared type (there often isn't one).
+
+### Type hints (optional, not enforced at runtime)
+
+Python also supports **optional** type annotations (PEP 484) — closer to
+what TypeScript gives you, but Python itself does **not** enforce them at
+runtime; they're purely for humans and external tools (PyCharm, `mypy`)
+to catch mistakes *before* running the code:
+```python
+def add(a: int, b: int) -> int:
+    return a + b
+
+add("oops", "still runs")   # runs fine at runtime, no TypeError from typing —
+                             # a type checker (mypy/PyCharm) would flag it though
+```
+None of the exercises so far use these annotations — every function has
+been written with plain, unannotated parameters — but you'll see them a
+lot in larger/production Python codebases.
+[`typing` module — Python docs](https://docs.python.org/3/library/typing.html) ·
+[PEP 484 — Type Hints](https://peps.python.org/pep-0484/)
+
+### Reference
+
+[Built-in Types — Python docs](https://docs.python.org/3/library/stdtypes.html) —
+full built-in types reference.
