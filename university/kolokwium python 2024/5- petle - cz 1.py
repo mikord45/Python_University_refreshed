@@ -46,8 +46,11 @@ for((a, b), c) in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4,5,6]):
     print(a, b, c)
 
 print("=====")
-for(a, c) in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4,5,6]):
-    print(a, c)
+for(a, b) in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4,5,6]):
+    print(a, b)
     # print(a[0], a[1], c)
 
-
+print("=====")
+for a in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4,5,6]):
+    print(a)
+    # print(a[0], a[1], c)

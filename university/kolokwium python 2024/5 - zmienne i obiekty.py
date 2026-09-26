@@ -39,8 +39,10 @@ print(s2)
 print(id(s1))
 print(id(s2))
 
+print("----")
 a = [1,2,3]
 b = a[:]
+print(b)
 del b[1]
 print(a)
 print(b)

@@ -49,7 +49,7 @@ print(dict6)
 dict6.update({'one':"xd", 65:10})
 print(dict6)
 
-# dict7 = {'key3': 'value3', 'key2': 'value2', 'key1': 'value1'}
-# print(dict7)
-# dict7.pop()
-# print(dict7)
+dict7 = {'key3': 'value3', 'key2': 'value2', 'key1': 'value1'}
+print(dict7)
+dict7.pop('key3')
+print(dict7)

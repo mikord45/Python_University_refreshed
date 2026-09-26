@@ -30,6 +30,7 @@ print(e)
 e.reverse()
 print(e)
 
+print("----")
 del e[:3]
 print(e)
 e[4:] = []

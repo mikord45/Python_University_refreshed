@@ -1243,6 +1243,663 @@ str('abc'), repr('abc') # 'abc', "'abc'" — repr() includes the quotes
   modern preferred choice, but the other two are common enough in
   existing code to be worth recognizing.
 
+## 2026-09-26 — `3-listy-i-krotki.py` (university/kolokwium python 2024)
+
+Large file covering list/tuple mutation methods and unpacking patterns.
+Understood, concepts for reference (verified against actual output):
+
+```python
+b = range(20, 90, 5)
+print(b)          # range(20, 90, 5) — NOT a list!
+c = list(b)
+print(c)           # [20, 25, 30, 35, ..., 85]
+```
+- **`range(start, stop, step)`** — the 3-argument form (earlier exercises
+  only used `range(n)` or `range(1, 13)`, i.e. 1 or 2 args). `range(...)`
+  itself is a **lazy object**, not a list — printing it shows
+  `range(20, 90, 5)` literally; `list(b)` is what actually materializes
+  the values. Same lazy-object idea as `csv.DictReader` or the `zip()`
+  object from earlier files.
+
+```python
+d = c[3:7]                       # slicing works on lists exactly like strings
+e = d + ['a', 'b'] * 3           # list concatenation (+) and repetition (*)
+e[3:] = []                       # slice assignment — deletes a whole range at once
+del e[:3]                        # del with a slice — same idea, different syntax
+```
+- **`list + list`** concatenates; **`list * n`** repeats — same operators
+  as string concatenation/repetition (`3-lancuchy znakow.py`), just on
+  lists.
+- **Slice assignment** (`e[3:] = []`) — assigning to a slice replaces
+  (here: deletes, since the replacement is empty) that whole range of
+  elements in place. Lists are **mutable**, unlike strings, so this
+  actually works (no "build a new one via concatenation" workaround
+  needed, unlike the string version in the previous file).
+- **`del e[:3]`** — the `del` statement also accepts a slice, removing
+  that range of elements; different syntax from slice-assignment, same
+  net effect.
+
+```python
+e.append("test1")            # adds ONE item to the end
+e.extend(["test2", "test3"]) # adds MULTIPLE items (unpacks the iterable)
+e.extend("test4")            # extends with a STRING → adds each character separately!
+e.insert(2, 'test5')         # inserts one item at a specific index
+e.reverse()                  # reverses the list in place
+```
+- **`.append(x)` vs `.extend(iterable)`** — `.append()` always adds
+  exactly one new element (even if it's itself a list); `.extend()`
+  iterates its argument and adds each item individually. Gotcha:
+  `.extend("test4")` doesn't add the string `"test4"` as one item — it
+  iterates the string **character by character**, adding `'t'`, `'e'`,
+  `'s'`, `'t'`, `'4'` as five separate elements.
+- **`.insert(index, value)`** — inserts at a specific position, shifting
+  everything after it along.
+- **`.reverse()`** — reverses the list **in place** (mutates it, returns
+  `None`).
+
+```python
+e.remove('test3')     # removes the first item EQUAL to this value
+e.pop(1)               # removes AND returns the item at this index
+e.index('e')           # returns the index of the first occurrence
+```
+- **`.pop(index)`** — like `.remove()` (used in `pythonExercises3/zad3.py`)
+  but removes **by index** instead of by value, and **returns** the
+  removed item instead of just discarding it. `.pop()` with no argument
+  removes/returns the *last* item.
+- **`.index(value)`** — the reverse lookup of `.remove()`: given a value,
+  find its position.
+
+```python
+sorted(e)        # returns a NEW sorted list; e itself is unchanged
+e.sort()          # sorts e IN PLACE; returns None
+e.sort(reverse=True)
+```
+- **`sorted(x)` (built-in function) vs `x.sort()` (list method)** — key
+  distinction: `sorted()` works on any iterable and always returns a
+  brand-new list, leaving the original untouched; `.sort()` only exists
+  on lists, mutates in place, and returns `None`. (`.sort(reverse=True)`
+  itself was already seen in `pythonExercises/zad5.py`.)
+
+```python
+f = 1, 2, 3        # tuple — the COMMA creates it, not the parentheses
+g = (1, 2, 3)       # same thing, parens are just visual/optional here
+h = 1,               # a ONE-element tuple — needs a trailing comma
+i = (1,)             # same — (1) alone would just be the int 1, not a tuple
+```
+- **Tuples are created by the comma, not by parentheses.** `f = 1, 2, 3`
+  is a tuple exactly like `g = (1, 2, 3)` — parens are optional except
+  where needed for clarity/precedence. For a **single-element tuple**,
+  the trailing comma is *mandatory*: `(1)` is just the integer `1` in
+  parentheses; `(1,)` is a 1-item tuple.
+
+```python
+var1, var2 = 1, 2
+var1, var2 = var2, var1    # swaps them — no temp variable needed
+print(var1, var2)          # 2 1
+```
+- **The classic Python swap idiom.** The right-hand side `var2, var1`
+  builds a tuple `(var2's value, var1's value)` first, *then* unpacks it
+  into `var1, var2` — so both swap simultaneously without needing a
+  throwaway temp variable, unlike the usual `temp = a; a = b; b = temp`
+  pattern in most other languages.
+
+```python
+l = [1, 2, 3]
+[la, lb, lc] = l        # unpacking with a LIST pattern on the left
+(x, y, z) = l            # unpacking with a TUPLE pattern on the left — both work identically
+
+t = 'x1', 'y2', 'z3'
+t1, t2, t3 = [t10, t20, t30] = t   # unpacking into TWO targets at once, from the same tuple
+```
+- **Unpacking doesn't care whether the left side is written with `[]` or
+  `()`** — both are just patterns describing "how many names, in what
+  shape," not a type requirement matching the right-hand side.
+- **Chained assignment with unpacking**
+  (`t1, t2, t3 = [t10, t20, t30] = t`) — Python evaluates the right-hand
+  side once (`t`) and assigns it to *both* targets in the chain, each
+  unpacked independently. Equivalent to unpacking `t` twice, once into
+  `t1, t2, t3` and once into `t10, t20, t30`.
+
+## 2026-09-26 — `4 - zbiory.py` (university/kolokwium python 2024)
+
+Set operations and the `frozenset` type. Verified against actual output.
+
+```python
+s1 = set('zdanie z literami')   # from a string — one element per character, duplicates dropped
+s2 = set([1, 68, 66, 66])        # from a list — [1, 68, 66, 66] → {1, 66, 68} — dup removed
+s3 = {6, 5, 5}                   # set literal — {6, 5, 5} → {5, 6} — dup removed
+```
+- **Three ways to build a `set`**: from any iterable via `set(...)`
+  (string, list, etc. — each element/character becomes one set member,
+  duplicates automatically collapse), or a **literal** with `{}`.
+  ⚠️ **Gotcha:** `{}` on its own is an **empty `dict`**, not an empty set
+  — `type({})` is `dict`. An empty set can only be written `set()`.
+
+```python
+s4.add(4)                       # add one element (from pythonExercises/zad4.py)
+s4.remove(5)                    # remove one element — raises KeyError if not present
+s4.update(['test1', 'test2'])   # merge in multiple elements from any iterable
+s4.update('kot')                # updating with a STRING adds each character separately
+                                  # (same gotcha as list.extend("test4") in the previous file)
+```
+- **`set.remove(x)`** — like `list.remove(x)`, but raises **`KeyError`**
+  if `x` isn't present (not `ValueError`, which is what the list version
+  raises) — a set is more like a dict internally (hence `KeyError`), even
+  though it only stores keys with no values.
+- **`set.update(iterable)`** — the set equivalent of `list.extend()`:
+  merges every element from the given iterable in, one at a time. Same
+  string-iterates-per-character gotcha applies.
+
+```python
+s1 & s2     # intersection — elements in BOTH
+s1 | s2     # union — elements in EITHER
+s1 - s2     # difference — in s1 but NOT in s2
+s1 |= s2    # in-place union (augmented assignment) — mutates s1 directly,
+            # same object afterward (unlike int += which rebinds to a new object)
+s1 >= s2    # superset check: does s1 contain every element of s2?
+s1 <= s2    # subset check: does s2 contain every element of s1?
+```
+- **`&`/`|`/`-`** — intersection/union/difference, the standard set
+  algebra operators. **`|=`** (and similarly `&=`, `-=`, `^=`) mutate the
+  set **in place** rather than rebinding to a new object — because `set`
+  is mutable, unlike `int`/`str`/`tuple`.
+- **`>=`/`<=` on sets mean subset/superset, not size comparison** —
+  `a >= b` asks "is `a` a superset of `b`" (contains every element of
+  `b`); `a <= b` asks "is `a` a subset of `b`." (`>`/`<` are the *proper*
+  subset/superset versions — subset/superset **and** not equal.) Two sets
+  can be neither `<=` nor `>=` each other if they only partially overlap.
+
+```python
+s30 = set('kot')            # {'k', 't', 'o'} — mutable
+s30f = frozenset('kot')      # frozenset({'k', 't', 'o'}) — immutable
+s30.remove('k')              # fine — set is mutable
+s30f.remove('k')             # AttributeError — frozenset has no .remove()/.add()/.update()
+```
+- **`frozenset`** — the immutable counterpart to `set`, same relationship
+  as `tuple` is to `list`. No mutating methods at all (no `.add()`,
+  `.remove()`, `.update()`). The payoff for giving up mutability is
+  **hashability**: a `frozenset` can be used as a `dict` key or as a
+  member of another `set` (`hash(frozenset(...))` works,
+  `hash(a_regular_set)` raises `TypeError: unhashable type: 'set'`) —
+  useful whenever you need "set of things" semantics *and* need that
+  collection to itself be hashable.
+
+## 2026-09-26 — `4-pliki.py` (university/kolokwium python 2024)
+
+File-reading/writing mechanics beyond the basic `with open(...) as f:` +
+`.read()`/`.readlines()` already seen in `pythonExercises2/zad2.py`.
+
+```python
+f = open(path)
+txt = f.read(40)     # read only the first 40 CHARACTERS, not the whole file
+f.close()
+```
+- **`f.read(n)`** — limits how much to read to `n` characters instead of
+  the whole file (plain `f.read()` reads everything). The file keeps an
+  internal **position/cursor** that automatically advances as you read —
+  a second `f.read()` call afterward continues from where the first one
+  stopped, rather than starting over.
+- **`repr(txt)` after reading a file** — reused from `3-lancuchy
+  znakow.py`'s `str()` vs `repr()`; printing `repr(txt)` shows `\n` as a
+  literal two-character escape instead of rendering an actual line break,
+  which is why it's a common debugging habit right after a file read —
+  "show me exactly what's in this string, unprettified."
+
+```python
+f = open(path)
+a = f.readline()     # reads just ONE line (up to and including the next \n)
+b = f.readlines()     # reads ALL remaining lines into a list of strings
+f.close()
+
+f = open(path)
+for line in f:        # iterating a file object directly yields one line at a time
+    print(line)
+f.close()
+```
+- **`f.readline()`** — reads a single line (this is what `readlines()`
+  from `pythonExercises2/zad2.py` does repeatedly under the hood, one
+  call at a time instead of all at once).
+- **Iterating a file object directly with `for line in f:`** — a file
+  object is itself iterable, yielding one line per iteration; equivalent
+  to, but more idiomatic than, manually calling `.readline()` in a loop.
+
+```python
+f.seek(9)    # move the file's read position to byte offset 9; returns the new position
+```
+- **`f.seek(offset)`** — jumps the file's internal cursor to a specific
+  position, overriding where the *next* read starts from (`f.seek(0)`
+  rewinds to the very start, letting you re-read without reopening).
+  - **Byte offsets ≠ character offsets in general.** For plain ASCII
+    text, 1 character = 1 byte in UTF-8, so they line up. But non-ASCII
+    characters (`ó`, `ł`, emoji, ...) take **multiple bytes** in UTF-8
+    (e.g. `"kraków"` is 6 characters but 7 bytes — `ó` alone is 2 bytes:
+    `b'krak\xc3\xb3w'`), so an arbitrary numeric `.seek()` can land
+    mid-character on non-ASCII text, causing decode errors or garbled
+    output. Python's docs say only `0` or a value previously returned by
+    `.tell()` are safe to `.seek()` to on a text-mode file.
+  - **There's no true "seek by character count"** for an open stream,
+    because variable-width encoding means you can't compute a byte
+    offset from a character count without decoding through the data
+    first. Safe alternatives: read the whole file into a string and use
+    normal (character-based) string slicing, or `f.read(n)` — discarding
+    the result — to skip forward exactly `n` **characters** (since
+    `.read(n)` in text mode counts characters, not bytes, decoding as it
+    goes).
+
+```python
+with open("file2.txt", mode="w", encoding='utf-8') as f:
+    ...
+    f.write('wartość: %2d - potęga: %3d\n' % (a, b))
+```
+- **`open(path, mode="w", ...)`** — opens for **writing**, overwriting
+  the file if it exists (same `'w'` mode already seen in
+  `pythonExercises2/zad1.py`'s report generator).
+- **`%`-style formatting reused** for building each line
+  (`3-lancuchy znakow.py`), here with width specifiers (`%2d`, `%3d`)
+  right-aligning numbers in a fixed-width field.
+
+```python
+r = range(1, 51)
+res = [(a, b) for a in r for b in [a ** c for c in [2]] if b < 1000]
+```
+- **A comprehension's `for` source can itself be another comprehension.**
+  `[a ** c for c in [2]]` is a roundabout way to compute `[a ** 2]` (a
+  single-item list, since `c` only ever takes the one value `2`), so the
+  outer `for b in [...]` effectively runs once per `a`, binding
+  `b = a ** 2`. Combined with the outer `for a in r` and the
+  `if b < 1000` filter, the whole expression pairs every `a` with its
+  square, keeping only squares under 1000 — same "chained `for`/`if`"
+  shape as `3 - list comprehension.py`, just with a nested comprehension
+  as one of the iteration sources instead of a plain range/list.
+
+## 2026-09-26 — `4-słowniki.py` (university/kolokwium python 2024)
+
+Goes deeper into `dict` than `pythonExercises/zad4.py`. Verified against
+actual output.
+
+```python
+d1 = {}
+d1['zwierz'] = 'pies'   # assigning to a new key adds it
+d1[78] = 514              # keys don't have to be strings — any hashable type works
+
+d2 = {"klucz": "wartość", 123: 'abc', True: [1, 4, 6]}   # mixed key types in one dict
+```
+- **Dict keys can be any hashable type**, mixed freely in the same dict —
+  strings, ints, even `bool` (`True`/`False`). Gotcha worth knowing:
+  `bool` is technically a subtype of `int` (`True == 1`), so `True` and
+  `1` would collide as the *same* dict key if both were used.
+
+```python
+d3 = dict()                          # empty dict via constructor (like list(), set())
+dict1 = dict(zip(keys, values))       # build a dict directly from a zip() of two iterables!
+dict2 = dict.fromkeys([1, 2, 3])       # {1: None, 2: None, 3: None} — same default value (None) for every key
+dict3 = dict.fromkeys([1, 2, 3], 5)    # {1: 5, 2: 5, 3: 5} — custom default value for every key
+```
+- **`dict(zip(keys, values))`** — directly ties together the `zip()`
+  concept from the notes' "concepts not yet covered" list with `dict`
+  construction: `zip` pairs two iterables positionally, `dict(...)` turns
+  those pairs straight into key→value entries in one call. This is
+  exactly the same result as the `{state: capital for state, capital in
+  zip(a, b)}` dict comprehension discussed earlier — `dict(zip(...))`
+  is a shorter non-comprehension way to write the same thing when no
+  transformation/filtering is needed.
+- **`dict.fromkeys(iterable, default=None)`** — a dedicated constructor
+  for "give me a dict with these keys, all sharing one default value."
+
+```python
+dict4 = {'a': 'valueA', 'b': 'valueB'}
+dict4.get('a')          # 'valueA'
+dict4.get('c')          # None — missing key, no error
+dict4.get('c', 'brak')  # 'brak' — custom fallback instead of None
+```
+- **`dict.get(key, default=None)`** — reads a value **without raising**
+  if the key is missing (unlike `dict4['c']`, which would raise
+  `KeyError`). Optionally takes a fallback value to return instead of
+  `None`. Safer than indexing when a key might not exist.
+
+```python
+dict5 = {"key1": "value1", "key2": "value2", "key3": "value3"}
+'key2' in dict5          # True — `in` on a dict checks KEYS, not values
+dict5.keys()               # dict_keys(['key1', 'key2', 'key3'])
+dict5.values()             # dict_values(['value1', 'value2', 'value3'])
+dict5.items()               # dict_items([('key1', 'value1'), ...])
+```
+- **`in` on a dict checks membership among keys only**, not values —
+  `'value1' in dict5` would be `False` even though that string is a
+  value in the dict.
+- **`.keys()`/`.values()`/`.items()` return "view" objects**
+  (`dict_keys`, `dict_values`, `dict_items`), not plain lists — they
+  print differently (`dict_keys([...])`) and stay **live/in-sync** with
+  the dict if it changes afterward, rather than being a frozen snapshot.
+  Wrap in `list(...)` if you need an actual independent list.
+
+```python
+dict6 = {'python': 2.7, 97: 'a', 65: 'A'}
+dict6['python'] = 3.0      # overwrite an existing key's value
+del dict6[97]                # delete a key (del statement, same as del on a list slice earlier)
+dict6.pop('python')          # removes AND returns the value for a key (like list.pop, but by key)
+dict6.update({1: 2, 3: 56})  # merge another dict in
+dict6.update({'one': "xd", 65: 10})
+# → {65: 10, 1: 2, 3: 56, 'one': 'xd'}
+```
+- **`dict.pop(key)`** — same idea as `list.pop(index)` (removes and
+  returns), but by **key** instead of by index.
+- **`dict.update(other)`** — merges another dict's entries in.
+  Interesting insertion-order detail confirmed by the actual output
+  above: updating the value of an **existing** key (`65`) does **not**
+  move it — it stays in its original position; only a genuinely **new**
+  key (`'one'`) gets appended at the end. Dicts preserve insertion order,
+  and `.update()` only affects that order for brand-new keys.
+
+## 2026-09-27 — `5- petle - cz 1.py` / `5 - petle cz.2.py` (university/kolokwium python 2024)
+
+Loop control flow: `continue`, `break`, and the distinctly-Python
+`for`/`while`...`else` construct. Verified against actual output
+(including simulating stdin for the `input()`-based `while` example).
+
+```python
+for litera in 'napis':
+    print(litera)   # n, a, p, i, s — one character per iteration
+```
+- **Iterating a string directly** — no need for `list('napis')` first;
+  a string is itself iterable, same as a file object
+  (`4-pliki.py`) or a `range`.
+
+```python
+for element in lista_z_zerami:
+    if element == 0:
+        continue     # skip the rest of THIS iteration, move to the next one
+    print(element)
+```
+- **`continue`** — immediately jumps to the next loop iteration, skipping
+  any remaining code in the loop body for the current one. For
+  `[1, 0, 0, 4, 5]`, the two `0`s never reach `print()`, but the loop
+  keeps going afterward → prints `1, 4, 5`.
+
+```python
+for element in lista_z_zerami:
+    if element == 0:
+        break        # exit the loop ENTIRELY, right now
+    print(element)
+```
+- **`break`** — stops the loop completely, right where it is (no more
+  iterations at all, unlike `continue`). For the same list, this prints
+  only `1` — the loop dies the moment it hits the first `0`.
+
+```python
+for element in lista:              # [1,2,3,4,5] — no zeros
+    if element == 0:
+        break
+    print(element)
+else:
+    print("wykonano bez przerwania")   # runs — loop finished normally
+
+for element in lista_z_zerami:      # has zeros
+    if element == 0:
+        break
+    print(element)
+else:
+    print('wykonano bez przerwania')   # does NOT run — loop was broken out of
+```
+- **`for`/`while` loops can have an `else` clause** — this is a Python-
+  specific construct with no direct equivalent in JS. **The `else` block
+  runs only if the loop completes normally (runs out of items /
+  condition becomes false), and is skipped entirely if the loop was
+  exited via `break`.** Mental model: "else" here means "else, if we
+  never broke out." Confirmed: `lista` (no zeros) reaches the `else` and
+  prints the message; `lista_z_zerami` hits `break` on the first `0` and
+  the `else` block never runs.
+- Same rule applies to **`while`...`else`** (`5 - petle cz.2.py`):
+  ```python
+  s = ''
+  while s != 'b':
+      s = input()
+      if len(s) == 3: break
+  else:
+      print('nie uzyto breaka')
+  ```
+  If the user types a 3-character string, `break` fires and the `else`
+  is skipped (nothing printed). If they eventually type `'b'` without
+  ever entering exactly 3 characters, the `while` condition naturally
+  becomes `False`, the loop ends without a `break`, and `else` runs,
+  printing `'nie uzyto breaka'` ("break wasn't used"). Both cases
+  verified by feeding simulated input.
+
+```python
+for ((a, b), c) in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4, 5, 6]):
+    print(a, b, c)              # 1 a 4  /  2 b 5  /  3 c 6
+
+for (a, b) in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4, 5, 6]):
+    print(a, b)                 # (1, 'a') 4  /  (2, 'b') 5  /  (3, 'c') 6
+
+for a in zip([(1, 'a'), (2, 'b'), (3, 'c')], [4, 5, 6]):
+    print(a)                    # ((1, 'a'), 4)  /  ((2, 'b'), 5)  /  ((3, 'c'), 6)
+```
+- **Nested unpacking in a `for` loop.** `zip(...)` here pairs each tuple
+  `(n, letter)` with a plain int, producing items shaped like
+  `((1, 'a'), 4)`. How much you unpack on the left is up to you:
+  - `for ((a, b), c) in ...` — unpacks **both levels**: `a`/`b` come from
+    inside the inner tuple, `c` is the int.
+  - `for (a, b) in ...` — unpacks only the **outer** level: `a` becomes
+    the whole inner tuple `(1, 'a')` (still packed), `b` becomes the int.
+  - `for a in ...` — **no unpacking at all**: `a` is the entire pair
+    `((1, 'a'), 4)`.
+  This is the same "unpacking pattern shape must match how much you want
+  to pull apart" idea from `3-listy-i-krotki.py`'s
+  `[la, lb, lc] = l`/`(x, y, z) = l`, just applied per-loop-iteration and
+  showing it can nest to match nested tuple structure.
+
+## 2026-09-27 — `5 - zmienne i obiekty.py` (university/kolokwium python 2024)
+
+One of the most important files so far — Python's actual object model:
+identity vs equality, aliasing, mutability's real consequences, shallow
+vs deep copy, and even a self-referencing list. Verified against actual
+output (exact `id()` numbers vary per run, but the *relationships*
+between them are what matter and are stable).
+
+```python
+a = {}
+b = {}
+c = b
+a == b     # True  — same CONTENT (both empty dicts)
+a is b     # False — DIFFERENT objects in memory
+b is c     # True  — SAME object (c is just another name for b)
+a is c     # False
+```
+- **`==` checks value/content equality; `is` checks identity** (are these
+  literally the *same object* in memory — same `id()`). Two separate
+  empty dicts are `==` (equal content) but not `is` (different objects).
+  `c = b` doesn't create a new dict — it just makes `c` another name
+  pointing at the *same* object as `b`, so `b is c` is `True`.
+- Proof this matters: mutating through one alias affects the other.
+  `c[36] = 'z'` also shows up when printing `b`, since `b`/`c` are the
+  same object — but `a` (a genuinely separate dict) is unaffected.
+
+```python
+l1 = []
+l2 = l1          # alias — same list object
+l1 += [1, 2, 3]
+l2 += [4, 5, 6]
+print(l1, l2)     # [1, 2, 3, 4, 5, 6]  [1, 2, 3, 4, 5, 6]  — BOTH have everything!
+
+s1 = ''
+s2 = s1           # alias — same string object (initially)
+s1 += '123'
+s2 += '456'
+print(s1, s2)      # 123   456   — each has only its OWN addition
+```
+- **This is the single most important contrast in the file.** `l1 += [...]`
+  on a **mutable** list *mutates the existing object in place* (same
+  underlying list `l2` is still aliased to) — so both names see the
+  combined result, since there was only ever one list. `s1 += '...'` on
+  an **immutable** string *can't* mutate anything — it creates a brand
+  new string object and rebinds only `s1` to it; `s2` still points at the
+  original, untouched object, so `s1`/`s2` end up completely independent.
+  Confirmed via `id()`: `s1`/`s2` share an id *before* the `+=`, but have
+  **different** ids *after* — while `l1`/`l2` stay the same object
+  throughout. Direct, concrete payoff of the mutable/immutable
+  distinction from the type-system notes and the `set |=` behavior seen
+  in `4 - zbiory.py`.
+
+```python
+a = [1, 2, 3]
+b = a[:]          # full slice on a list = an actual independent COPY, not an alias!
+del b[1]
+print(a, b)        # [1, 2, 3]   [1, 3]  — only b changed
+```
+- **`a[:]` on a list makes a real (shallow) copy** — unlike `c = b`
+  above. This is *the* idiom for "give me an independent copy of this
+  list."
+
+```python
+d1 = {'a': [1, 2, 3]}
+d2 = d1.copy()          # dict.copy() is a SHALLOW copy
+d2['a'].append(4)
+print(d1, d2)             # {'a': [1, 2, 3, 4]}  {'a': [1, 2, 3, 4]}  — BOTH changed!
+
+import copy
+d3 = copy.deepcopy(d1)   # deepcopy is a TRUE independent copy, recursively
+d3['a'].append(5)
+print(d1, d2, d3)          # d1/d2 unaffected: {'a': [1,2,3,4]} twice; d3: {'a': [1,2,3,4,5]}
+```
+- **Shallow copy (`.copy()`, or `a[:]`) only copies the top-level
+  container** — if that container holds *other mutable objects* (like a
+  list nested inside a dict), those nested objects are still **shared**
+  between the original and the copy. Mutating the nested list through
+  `d2` also shows up in `d1`, because `d1['a']` and `d2['a']` are
+  literally the same list object — only the outer `dict` was actually
+  copied.
+- **`copy.deepcopy(x)`** — recursively copies *everything*, including
+  nested mutable objects, giving you a truly independent structure.
+  `d3['a']` is its own separate list, so mutating it doesn't touch `d1`
+  or `d2` at all.
+
+```python
+a = [1, 2]
+a.append(a)         # a list containing ITSELF
+print(a)             # [1, 2, [...]]  — Python detects the cycle, prints [...] instead of looping forever
+print(a is a[2])      # True — a[2] IS a, literally
+print(a[2][2][2])      # [1, 2, [...]] — chasing the self-reference any number of times just gets back `a`
+```
+- **A list (or dict) can contain a reference to itself.** Since Python
+  containers hold *references*, not copies, `a.append(a)` puts a
+  reference to `a` inside `a`. Printing something with a circular
+  reference doesn't infinite-loop — Python's `repr()` detects the cycle
+  and prints `[...]` as a placeholder instead.
+
+```python
+isinstance(1, int)      # True
+isinstance(1, str)       # False
+isinstance(True, bool)    # True
+isinstance(True, int)     # True — bool IS a subclass of int (confirms the earlier
+                            #        True/1 dict-key-collision note from 4-słowniki.py)
+```
+- Concrete confirmation of the `bool` subclass-of-`int` fact mentioned
+  earlier: `isinstance(True, int)` is `True` because `bool` inherits from
+  `int` — `isinstance()` (unlike `type() ==`) respects that inheritance
+  relationship.
+
+```python
+napis = '7 skrzyń fig'
+stats = {'cyfry': 0, 'litery': 0, 'spacje': 0}
+for litera in napis:
+    if litera.isdigit():
+        stats.update({'cyfry': stats.get('cyfry') + 1})
+    elif litera.isalpha():
+        stats.update({'litery': stats.get('litery') + 1})
+    elif litera.isspace():
+        stats.update({'spacje': stats.get('spacje') + 1})
+print(stats)   # {'cyfry': 1, 'litery': 9, 'spacje': 2}
+```
+- **`str.isdigit()` / `.isalpha()` / `.isspace()`** — character-type
+  checks; `.isalpha()`/`.isdigit()` already seen in
+  `pythonExercises4/zad4.py`'s password generator, `.isspace()` new here
+  (checks for whitespace characters).
+- **Manual counter pattern**: `stats.get('key') + 1` (safe read, avoids
+  `KeyError`) combined with `.update({'key': ...})` to write back — this
+  is exactly the kind of thing `collections.Counter` exists to simplify
+  (not covered yet, but worth knowing the name — it's a `dict` subclass
+  built specifically for counting things, avoiding this manual
+  get-then-update dance).
+
+## 2026-09-27 — `5-funkcje.py` (university/kolokwium python 2024)
+
+Short file, no genuinely new syntax — mostly a plain function definition
+(`def user(imie, nazwisko): return imie + ' ' + nazwisko`, same shape as
+`pythonExercises/zad5.py`) plus one worthwhile reinforcement:
+
+```python
+def wypisz(a):
+    for x in a:
+        print(x)
+
+wypisz('abcde')                        # works — iterates characters
+wypisz([1,2,3,4,5,6,7,8,9,10])          # ALSO works — iterates list elements
+```
+- **Concrete demonstration of duck typing** (concept introduced earlier
+  via PyCharm's `{__le__, __add__}` inferred hints in
+  `pythonExercises3/zad1.py`, and in the type-system notes). `wypisz(a)`
+  never declares what type `a` should be — it just does `for x in a:`.
+  Since both a `str` and a `list` are iterable, the exact same function
+  body works correctly on either, with zero type checking or branching.
+  Python doesn't care that one call passes a string and the other a list
+  — it only cares that whatever's passed *supports iteration*.
+
+## 2026-09-27 — `5-prawda-i-falsz.py` (university/kolokwium python 2024)
+
+Truthiness, made explicit with `bool()`, plus `or`/`and` returning actual
+values rather than plain booleans. Verified against actual output.
+
+```python
+bool([])       # False
+bool(0)        # False
+bool(0.0)      # False
+bool('')       # False
+bool(None)     # False
+bool({})       # False
+bool(())       # False
+bool(set())    # False
+
+bool([0])      # True !
+```
+- **`bool(x)`** explicitly converts anything to `True`/`False` using
+  Python's truthiness rules — makes concrete the truthy/falsy checks
+  already relied on implicitly in earlier files (`if
+  product_without_white_characters:` in `pythonExercises/zad4.py`,
+  `if numbers_of_elements_per_set:` in `pythonExercises2/zad4.py`).
+  **Every built-in "empty" value is falsy**: `0`, `0.0`, `''`, `None`,
+  and every *empty* container (`[]`, `{}`, `()`, `set()`) regardless of
+  its type.
+- **`bool([0])` is `True`** — an important distinction: a **non-empty**
+  container is truthy *even if the thing inside it is itself falsy*.
+  Only the container's own emptiness matters for its own truthiness, not
+  what's stored inside it. `[0]` has one element, so it's a non-empty
+  list → truthy, even though that one element (`0`) is falsy on its own.
+
+```python
+[] or {} or 0            # 0      — none truthy, returns the LAST value
+[] or 'kot' or 0          # 'kot'  — first truthy value, short-circuits (0 never evaluated)
+1 or 2                     # 1      — first operand already truthy, stops there
+2 or 1                     # 2
+
+'dom' and {1: 'p'} and 78    # 78     — all truthy, returns the LAST value
+'dom' and {} and 78           # {}     — first falsy value, short-circuits (78 never evaluated)
+```
+- **`or`/`and` return one of their actual operand values, not just
+  `True`/`False`** (same behavior as JS's `||`/`&&`). Both **short-circuit**
+  (stop evaluating as soon as the outcome is decided) and scan
+  left-to-right:
+  - **`or`** stops at the **first truthy** value and returns it; if none
+    are truthy, returns the **last** operand.
+  - **`and`** stops at the **first falsy** value and returns it; if none
+    are falsy, returns the **last** operand.
+- Practical patterns this enables: `x or 'default'` — "use `x` if it's
+  non-empty/non-zero, otherwise fall back" (like JS's
+  `x || 'default'`); `user and user.name` — "only access `.name` if
+  `user` is truthy/exists," Python's rough equivalent of JS optional
+  chaining (`user?.name`), built from a general-purpose operator rather
+  than dedicated syntax.
+
 ## 2026-09-25 — Practice tasks
 
 Self-directed exercises combining concepts from `university/pythonWSEI/`
