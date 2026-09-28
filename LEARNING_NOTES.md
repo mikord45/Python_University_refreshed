@@ -1900,6 +1900,927 @@ bool([0])      # True !
   chaining (`user?.name`), built from a general-purpose operator rather
   than dedicated syntax.
 
+## 2026-09-28 — `6 - zasieg zmiennych.py` (university/kolokwium python 2024)
+
+The big one — Python's actual scope/namespace rules (LEGB: Local →
+Enclosing → Global → Built-in), closures, `global`, and some genuinely
+surprising gotchas. Verified against actual output throughout.
+
+```python
+def local():
+    x = 5
+    print("x1: ", x)
+local()
+# print(x)   # would raise NameError — x only ever existed inside local()
+```
+- **A variable assigned inside a function is local to it** and simply
+  doesn't exist once the function returns — the most basic scope rule,
+  everything else in this file builds on it.
+
+```python
+a = 23
+def use_global():
+    print(a)     # just READS a — never assigns it, so Python looks
+                  # outward and finds the module-level a. Works fine.
+use_global()
+```
+- **Reading an outer-scope variable "just works"** without any keyword —
+  `global`/`nonlocal` are only needed when **assigning**, not reading.
+  This is the LEGB lookup in action: `a` isn't found locally, so Python
+  checks the next scope out (here, straight to Global) automatically.
+
+```python
+import __main__
+print(__main__.a)             # 23 — same object as the plain `a`
+print(__main__.use_global)     # same function object as `use_global`
+```
+- **`__main__` is a special module representing the script currently
+  running directly** — the exact mechanism behind `if __name__ ==
+  "__main__":` (`pythonExercises2/zad1.py`): `__name__` equals
+  `"__main__"` because the running script *is* registered as that
+  module. `import __main__` inside the script imports a handle to
+  itself — `__main__.a` and the bare `a` are two names for the *same*
+  object, since module-level variables genuinely live as attributes on
+  the module object, not in some abstract detached "global space."
+
+```python
+def use_enclosing():
+    def f1():
+        def f2(): print(x)
+        x = 6
+        f2()      # prints 6 — x already assigned by the time f2() is called
+        x = 5      # too late — f2() already ran and finished
+    f1()
+use_enclosing()
+```
+- **Nested functions can read variables from any enclosing function**
+  (not just the module) — the "Enclosing" step of LEGB. `f2` has no `x`
+  of its own, so it looks outward to `f1`'s local `x`.
+- **This lookup happens at call time, not definition time.** `f2` is
+  *defined* before `x = 6` runs, but by the time `f2()` is actually
+  *called*, `x` already holds `6` — so that's what prints. Function
+  bodies don't "snapshot" enclosing variables when defined; they look
+  them up fresh each time they run.
+
+```python
+def make_adder(a):
+    def f1(b):
+        print(str(a) + str(b))
+    return f1
+
+c = make_adder('pies ')
+c('i kot')   # 'pies i kot'
+```
+- **Closures**: `f1` "remembers" the `a` from `make_adder`'s call even
+  after `make_adder` has already returned — `c` is a specialized version
+  of `f1` with `a='pies '` permanently baked into its enclosing scope.
+  Same closure-factory shape as `make_counter` below.
+
+```python
+a = 1
+def f():
+    a = 2        # plain assignment → a is LOCAL to f, shadows the outer one
+    print(a)      # 2
+f()
+print(a)           # 1 — outer a completely untouched
+
+a = 1
+def f1():
+    print(a)       # 1 — no assignment to a anywhere in f1, so it's just the outer a
+    # a = 2         # if uncommented: UnboundLocalError on the print(a) line above!
+f1()
+```
+- Reinforces the core local-shadowing rule from earlier files: assigning
+  to a name **anywhere** in a function body makes it local for the
+  **entire** function, regardless of where in the code that assignment
+  sits. The commented `# a = 2` is a live example: if uncommented, the
+  `print(a)` *above* it would suddenly raise `UnboundLocalError` — same
+  mechanism as the `l += [1, 2]` and `x = 15` cases discussed next.
+
+```python
+l = []
+def f2():
+    l += [1, 2]   # UnboundLocalError!
+f2()
+```
+- **Why this fails**: `+=` needs to *read* `l` first (to compute
+  `l + [1, 2]`) before writing it back. But since `f2` assigns to `l`
+  somewhere in its body, Python has already classified `l` as local to
+  `f2` — so that read happens against a local `l` that doesn't have a
+  value yet. `UnboundLocalError: cannot access local variable 'l' where
+  it is not associated with a value`.
+
+```python
+def create_global():
+    # global x
+    x = 15
+create_global()
+print(x)   # NameError: name 'x' is not defined
+```
+- **A different failure mode than the one above.** `create_global()`
+  itself runs fine — no `global`, so `x = 15` just creates an ordinary
+  local variable, used and discarded when the function returns. The
+  crash happens on the *next* line: `print(x)` fails with `NameError`
+  because no module-level `x` was ever created — the function's local
+  `x` never touched global scope at all. (`global x` is exactly what's
+  missing to bridge that gap in the original, uncommented version.)
+
+```python
+def modify_global():
+    global y
+    y = -y     # reads the CURRENT global y, negates it, writes back
+y = 10
+modify_global()
+print(y)   # -10
+```
+- **`global` permits both reading and writing** the module-level name —
+  `y = -y` needs to read `y` first, and thanks to `global y`, that read
+  correctly targets the module-level `10`, not a nonexistent local.
+
+```python
+z = 10
+def f():
+    z = 11
+    def g():
+        global z
+        print(z)    # 10, NOT 11!
+    g()
+f()
+```
+- **`global` always means "the outermost module scope," skipping any
+  enclosing function scopes in between** — even though `g` is nested
+  inside `f`, `global z` inside `g` jumps straight past `f`'s local
+  `z = 11` to the true module-level `z = 10`. If `g` just did `print(z)`
+  with no declaration, normal LEGB lookup *would* find `f`'s `z = 11`
+  via the Enclosing step — `global` specifically bypasses that.
+  (Reaching `f`'s local `z` specifically, rather than the module's, is
+  what `nonlocal` is for instead — not used in this file, but the
+  natural counterpart to note here.)
+
+```python
+import builtins
+print(builtins)              # <module 'builtins' (built-in)>
+print(dir(builtins))          # ~159 names: print, len, int, ValueError, True, False, None, ...
+print(dir(__builtins__))      # SAME list — in __main__, __builtins__ IS the builtins module
+```
+- **`builtins`** is the real module holding every name available
+  everywhere without importing (`print`, `len`, `int`, exceptions, etc.).
+  **`dir(x)`** — new here — lists all names defined on an object/module.
+  **`__builtins__`** is a special variable auto-injected into every
+  module, the actual mechanism behind built-ins "just working"
+  everywhere; in the directly-run script (`__main__`), it *is* the same
+  object as `builtins` (`builtins is __builtins__` → `True`) — elsewhere
+  (a module that gets imported rather than run directly), CPython may
+  give it as a plain `dict` instead, an implementation detail not to
+  rely on.
+
+```python
+import keyword
+print(keyword.kwlist)
+# ['False', 'None', 'True', 'and', 'as', ..., 'while', 'with', 'yield']  — 35 reserved words
+```
+- **`keyword.kwlist`** — Python's true reserved keywords, protected by
+  the grammar itself (`for = 5` is a `SyntaxError`, not just bad style).
+  **Not** the same set as `dir(builtins)` — mostly disjoint, with one
+  deliberate 3-way overlap: `True`/`False`/`None` are *both* real objects
+  (hence in `builtins`) *and* keywords (hence unassignable), specifically
+  so nobody can redefine what "true"/"false"/"nothing" mean. Everything
+  else in `builtins` (`int`, `print`, `len`, ...) is just a regular,
+  reassignable name — no special grammar protection at all, demonstrated
+  right below:
+
+```python
+print(int)    # <class 'int'>
+int = 14       # perfectly legal — int is just a builtin NAME, not a keyword
+print(int)     # 14 — the type is now shadowed for the rest of this scope
+```
+- **Builtins can be silently shadowed** — reassigning `int` at module
+  level hides the actual `int` type for any code after this line in the
+  same scope (calling `int('5')` afterward would now fail, since `int`
+  no longer refers to the type). A real footgun, and exactly why
+  `keyword.iskeyword('int')` being `False` matters practically.
+
+```python
+def make_counter():
+    def increase():
+        increase.count += 1
+        print(increase.count)
+    increase.count = 0
+    return increase
+
+counter = make_counter()
+counter(); counter(); counter()
+print(counter.count)   # 3 — readable from OUTSIDE, without even calling it
+
+counter2 = make_counter()   # a SEPARATE call → a brand-new, independent increase object
+counter2()                    # 1 — counter.count is unaffected, still 3
+```
+- **Functions are objects and can carry their own attributes** —
+  `increase.count = 0` attaches a persistent piece of state directly to
+  the function object (`type(counter)` is `<class 'function'>`,
+  `hasattr(counter, 'count')` is `True`).
+- **Why `increase.count += 1` needs no `global`/`nonlocal` at all**: it
+  only *reads* the name `increase` (found via the enclosing scope —
+  `make_counter`'s namespace — a read, not an assignment to `increase`
+  itself), then reads/writes the **attribute** `.count` on that object.
+  Attribute mutation is a completely separate mechanism from
+  variable/name scoping — same reason `l.append(x)` never needed
+  `global l` either.
+  - Each call to `make_counter()` creates a **fresh, independent**
+    `increase` object with its own `.count`, starting at `0` — same
+    closure-factory pattern as `make_adder` above, just using a function
+    attribute instead of a captured parameter to hold per-instance state.
+    A lightweight, manual alternative to the `class`-based
+    encapsulation seen throughout `pythonWSEI/pythonExercises3`/`4`.
+
+## 2026-09-28 — `7 - argumenty funkcji.py` (university/kolokwium python 2024)
+
+Deep dive into `*`/`**` at both call sites and definition sites, plus the
+classic mutable-default-argument gotcha. Verified against actual output.
+
+```python
+def insert(collection, position, value):
+    collection[position] = value       # mutates the ORIGINAL object — visible outside
+    collection = ['something', 'new']   # REBINDS the local name — does NOT affect the caller
+    return collection
+
+c = [1, 8, 23]
+print(insert(c, 2, 80))   # ['something', 'new']
+print(c)                   # [1, 8, 80]  — the mutation persisted, the rebind did NOT
+```
+- **Mutating a passed-in object vs. reassigning the parameter name are
+  completely different things.** `collection[position] = value` mutates
+  the actual list object `c` points to — visible to the caller, since
+  `collection` and `c` were aliases of the same object (same lesson as
+  `5 - zmienne i obiekty.py`). But `collection = [...]` afterward just
+  makes the **local name** `collection` point to a brand-new list — `c`
+  outside is completely unaffected by that rebind, since rebinding a name
+  never reaches back to change what the caller's variable points to.
+
+```python
+print3(*args)              # unpack a list
+print3(*[1, 2, 3])          # unpack a list literal
+print3(*(1, 2, 3))          # unpack a tuple
+print3(*range(1, 4))        # unpack a range
+print3(1, *[2, 3])           # mix a literal positional arg with unpacking
+# all produce: 1 2 3
+```
+- **`*` at a call site works on any iterable** — list, tuple, `range`,
+  etc. — spreading its elements out as separate positional arguments.
+
+```python
+print3(1, c=3, *[2])   # 1 2 3
+```
+- Covered in depth already: positional arguments (literal + `*`-unpacked)
+  are collected into one ordered sequence and fill parameters left to
+  right; keyword arguments (`c=3`) are matched by **name**, independent
+  of where they're textually written in the call.
+
+```python
+args = {"d": 4, "c": 3, "b": 2, "a": 1}
+print4(**args)                          # 1 2 3 4 — matched by KEY NAME, dict order irrelevant
+print4(1, *[2], **{'c': 3}, d=4)          # 1 2 3 4 — all four call styles combined at once
+```
+- **`**` at a call site unpacks a dict into keyword arguments**, matched
+  to parameters by key name — completely independent of the dict's own
+  insertion order (`args` is defined `d, c, b, a` but still correctly
+  lands as `a=1, b=2, c=3, d=4`). A single call can freely mix literal
+  positional args, `*`-unpacked positional args, `**`-unpacked keyword
+  args, and literal keyword args all together.
+
+```python
+def call2(function, args, args2):
+    return function(*args, **args2)
+
+print(call2(sorted, [[1, 2, 3, 4, 5]], {'reverse': True}))
+# → sorted(*[[1,2,3,4,5]], **{'reverse': True}) → sorted([1,2,3,4,5], reverse=True) → [5,4,3,2,1]
+```
+- **`*`/`**` unpacking works when calling a function *passed in as a
+  parameter*, not just a hardcoded name** — `call2` is a generic
+  "call anything with these args" wrapper. Reuses `sorted()`
+  (`3-listy-i-krotki.py`) as the example target.
+
+```python
+def f1(key, value, a={}):
+    a[key] = value
+    return a
+
+f1(1, 2)        # {1: 2}
+f1(3, 4)        # {1: 2, 3: 4}          — SAME dict as before, accumulating!
+f1(5, 6)        # {1: 2, 3: 4, 5: 6}
+f1(7, 8, {})    # {7: 8}                 — explicit fresh dict, bypasses the default entirely
+f1(9, 10)       # {1: 2, 3: 4, 5: 6, 9: 10}   — back to the SAME shared default, still accumulating
+```
+- **Mutable default arguments are evaluated exactly ONCE — at function
+  *definition* time, not per call.** `a={}` creates a single dict object
+  that gets permanently attached to the function (visible via
+  `f1.__defaults__`); every call that doesn't override `a` reuses that
+  *same* object, and since dicts are mutable, mutations accumulate
+  across calls. A call that explicitly passes its own `a` (`f1(7,8,{})`)
+  sidesteps the shared default entirely with its own independent dict.
+  - **Standard fix**: default to `a=None`, then
+    `if a is None: a = {}` inside the function body — `None` is
+    immutable and harmless to share, and a genuinely fresh dict gets
+    built fresh on every call that needs one.
+
+```python
+def print_everything(*args, **args2):
+    print(args)     # (1, 3, 4)                    — a TUPLE
+    print(args2)     # {'e': 5, 'd': 6, 'f': 7}       — a dict
+
+print_everything(1, e=5, *[3, 4], **{'d': 6, 'f': 7})
+```
+- **Inside a function definition, `*args` collects all stray positional
+  arguments into a `tuple`** (literal `1` plus the unpacked `[3, 4]` all
+  land together as `(1, 3, 4)`) — confirms the "collects into a tuple"
+  detail mentioned in the earlier `*args`/`**kwargs` notes, now seen
+  directly. `**args2` likewise collects stray keyword arguments into a
+  `dict`.
+
+```python
+def print_everything2(*args, a, b):
+    print(a)          # 10
+    print(b)           # 20
+    print(*args)         # 543 54353234 234234
+
+print_everything2(543, 54353234, 234234, a=10, b=20)
+```
+- **Keyword-only parameters**: anything listed **after** `*args` in a
+  function definition (`a`, `b` here) can *only* be supplied by keyword
+  — never positionally — since `*args` already greedily absorbs every
+  positional argument first. Calling this with `a`/`b` as plain
+  positional values instead would fail.
+- **`print(*args)` unpacks the tuple back out** as separate arguments to
+  `print()` — showing them space-separated (`543 54353234 234234`)
+  instead of printing the tuple itself (`(543, 54353234, 234234)`).
+
+## 2026-09-28 — `7 - lambda.py` (university/kolokwium python 2024)
+
+`lambda` in practice, plus `sorted(key=...)` and `map()`. Verified
+against actual output.
+
+```python
+import random
+list2 = [(a, b) for a in range(0, 10) for b in [random.randint(0, 10)]]
+# random pairs, e.g. [(0, 0), (1, 7), (2, 5), ...]
+
+sorted_list = sorted(list2, key=lambda t: t[1])
+# sorted by the SECOND element of each tuple, e.g. [(0, 0), (5, 1), (6, 3), ...]
+```
+- **`random.randint(a, b)`** — a single random integer in the *inclusive*
+  range `[a, b]` (different from `random.choice()`/`random.choices()`
+  used in `pythonExercises4/zad4.py`, which pick from an existing
+  sequence rather than generating a number).
+- **`sorted(iterable, key=function)`** — `key` supplies a function called
+  on each item to determine *what to sort by*, instead of comparing items
+  directly. `lambda t: t[1]` extracts the second element of each tuple
+  as its sort key, so the list ends up ordered by `b`, ignoring `a`'s
+  natural tuple-comparison priority. Ties keep their original relative
+  order (`sorted()` is **stable**).
+
+```python
+lambda_function = lambda a, b, c: a * b * c
+lambda_function(2, 4, 6)          # 48
+
+(lambda a, b, c: a + b + c)(3, 6, 9)   # 18 — defined and called immediately, no name needed
+```
+- **A `lambda` can take multiple parameters**, same comma-separated list
+  as a normal `def`, just restricted to one expression body.
+- **An "immediately invoked lambda"** — wrapping the `lambda` in
+  parentheses and calling it right away with `(...)`, without ever
+  assigning it a name. Rarely used in real code (usually you'd just
+  write a normal expression instead), but demonstrates that a `lambda`
+  is just an expression producing a callable object — it can be called
+  the moment it's created, like any other function value.
+
+```python
+l = [5, 10, 15, 20]
+l2 = list(map(lambda x: x * 2, l))   # [10, 20, 30, 40]
+
+def multiply(x):
+    return x * 2
+l3 = list(map(multiply, l))            # [10, 20, 30, 40] — same result, named function instead
+```
+- **`map(function, iterable)`** — applies `function` to every element of
+  `iterable`, lazily (like `zip`/`range`/`csv.DictReader` — wrap in
+  `list(...)` to materialize it). Functionally the transform-only
+  equivalent of a list comprehension (`[x * 2 for x in l]` would do the
+  same thing) — `map()` takes a separate function value instead of
+  writing the expression inline.
+- **A `lambda` and a `def`-defined function are interchangeable wherever
+  a plain callable is expected** — `map(lambda x: x*2, l)` and
+  `map(multiply, l)` produce identical results; `lambda` is just a
+  shorthand for a small function you don't want to name separately (same
+  reasoning as `sorted(key=lambda ...)` above — a throwaway function for
+  a single use, versus a reusable named `def` like `multiply`).
+
+## 2026-09-28 — `8 - generatory.py` (university/kolokwium python 2024)
+
+Goes well beyond the basic generator from `pythonExercises4/zad4.py` —
+exactly where execution pauses/resumes, `StopIteration`, iterating a
+generator with `for`, and two-way communication via `.send()`. Verified
+against actual output.
+
+```python
+def square_gen():
+    x = 1
+    while True:
+        yield x**2
+        x += 1
+
+s = square_gen()
+print(s)          # <generator object square_gen at 0x...> — just the object, no code runs
+print(next(s))     # 1
+print(next(s))     # 4
+print(next(s))     # 9
+```
+- **Printing a generator object directly doesn't run any of its code** —
+  it just shows its `repr()` (`<generator object ... at ...>`), same as
+  any other object. Only `next()`/iteration actually executes the body.
+- Same infinite `while True:` + `yield` shape as the password generator
+  (`pythonExercises4/zad4.py`), just without the retry-until-valid `if`
+  check — the simplest possible infinite generator.
+
+```python
+def generator():
+    while True:
+        print('wykonałem pierwszą linię')    # "I executed the first line"
+        yield 1
+        print('wykonałem drugą linię')        # "I executed the second line"
+
+g = generator()
+next(g)   # prints "pierwszą linię", THEN pauses at yield 1, returns 1
+next(g)   # RESUMES exactly after yield 1 → prints "drugą linię" →
+          #   loops back to the top of while → prints "pierwszą linię" again →
+          #   pauses at yield 1 again, returns 1
+```
+- **The clearest possible demonstration of exactly where a generator
+  pauses and resumes.** Each `next()` call resumes execution from the
+  precise point after the *previous* `yield`, runs until it hits a
+  `yield` again (executing everything in between — including the "second
+  line" print from the tail of the loop, then the "first line" print
+  from the top of the next iteration), and pauses there.
+
+```python
+def generator2():
+    yield 2
+
+g2 = generator2()
+print(next(g2))   # 2
+# next(g2)          # would raise StopIteration — no more yields left!
+```
+- **`StopIteration`** — the exception a generator (or any iterator)
+  raises once it's exhausted (no more `yield`s will ever execute — here,
+  the function just reaches its end after the single `yield`). This is
+  the exact mechanism a `for` loop relies on internally to know when to
+  stop — `for x in some_iterable:` repeatedly calls `next()` under the
+  hood and quietly stops the loop the moment it catches `StopIteration`,
+  rather than letting it propagate as a crash.
+
+```python
+def range_gen(limit):
+    i = 0
+    while i < limit:
+        yield i
+        i += 1
+
+for x in range_gen(3):
+    print(x)   # 0, 1, 2
+```
+- **A generator can be iterated directly with `for`**, exactly like
+  iterating a file object (`4-pliki.py`) or any other iterable — no need
+  to manually call `next()` in a loop yourself. The `while i < limit:`
+  becoming `False` is what naturally ends the function (and therefore
+  raises `StopIteration` behind the scenes), which is what tells the
+  `for` loop to stop after `0, 1, 2`.
+
+```python
+def test_generator():
+    received1 = yield 1
+    print(received1)
+    received2 = yield 2
+    print(received2)
+    # ... continues for received3–received6
+
+test_g = test_generator()
+next(test_g)          # 1
+next(test_g)           # resumes with NOTHING sent → received1 = None; runs to yield 2, returns 2
+next(test_g)            # received2 = None; returns 3
+next(test_g)             # received3 = None; returns 4
+test_g.send(50)           # resumes, SENDING 50 in → received4 = 50; runs to yield 5, returns 5
+next(test_g)               # received5 = None; returns 6
+```
+- **`yield` is a two-way channel, not just an output.** `x = yield v`
+  does two things at two different moments: (1) *on the way out*, pauses
+  and hands `v` back to the caller; (2) *on the way back in*, whatever
+  value gets sent into the generator at that resume point becomes the
+  result of the `yield` expression itself, assigned to `x`.
+- **`next(gen)` is exactly equivalent to `gen.send(None)`** — resuming
+  via `next()` always sends `None` in, which is why `receivedN` prints
+  `None` every time *except* the one resumption done via
+  `test_g.send(50)`, which sends `50` in instead.
+- **Timing subtlety**: the value sent on call *N* is received by the
+  `yield` the generator was paused on from call *N−1* — not the one
+  about to execute — since resuming first delivers the sent value to the
+  currently-paused `yield`, *then* runs forward to the *next* `yield`
+  (whose result is what actually gets returned to the caller).
+
+## 2026-09-28 — `8 - iteratory.py` (university/kolokwium python 2024)
+
+The **iterable vs. iterator** distinction that underlies every `for`
+loop, generator, and `zip()`/`csv.DictReader`/`range()` object used so
+far. Verified against actual output.
+
+```python
+l = [1, 2, 3]
+next(l)     # TypeError: 'list' object is not an iterator!
+
+i, j = iter(l), iter(l)   # get two SEPARATE iterators from the same list
+next(i)   # 1
+next(i)   # 2
+next(i)   # 3
+next(j)   # 1   — j is completely independent of i, starts fresh from the beginning
+next(j)   # 2
+next(j)   # 3
+print(i is j)   # False — two distinct iterator objects, even though both came from `l`
+```
+- **A `list` is *iterable* (you can loop over it with `for`) but is
+  *not itself an iterator*** — calling `next()` directly on a list fails.
+  This is a distinction that's been implicit throughout every earlier
+  `for x in ...:` loop, made explicit here for the first time.
+- **`iter(x)`** — takes any iterable and returns a genuine **iterator**
+  object (`type(i)` is `list_iterator` here) — something that *does*
+  support `next()` and internally tracks its own current position.
+  This is exactly what a `for` loop does automatically behind the
+  scenes: `for x in l:` implicitly calls `iter(l)` once to get an
+  iterator, then calls `next()` on *that* repeatedly until it raises
+  `StopIteration` (from `8 - generatory.py`) — you've just never had to
+  do those two steps by hand before.
+- **Each call to `iter(l)` produces an independent iterator** with its
+  own separate position/cursor — `i` and `j` both start over from `1`
+  and advance completely independently of each other, even though
+  they're both iterating the *same* underlying list `l`. This is the
+  same "iterable vs. iterator" relationship as a generator *function*
+  (defines *how* to produce values) vs. calling it (`gen()` produces an
+  actual iterator/generator *object*, and each call makes a fresh,
+  independent one) — `pythonExercises4/zad4.py`'s `generate_password(...)`
+  is a real-world example of exactly this pattern.
+
+```python
+# l = [1]
+# for i in l: l.append(1)   # commented out — would loop FOREVER
+```
+- **Mutating a list while iterating over it is a classic trap.** A
+  list's iterator checks the list's *current* length on each step, not a
+  fixed snapshot taken at the start — so appending to `l` inside a loop
+  that's iterating `l` keeps extending how many iterations there are,
+  forever. This is exactly why it's commented out in the file rather
+  than actually run.
+
+## 2026-09-28 — `9 - klasy cz1.py` (university/kolokwium python 2024)
+
+Classes are mutable, inspectable **objects** at runtime — dynamic
+attribute/method attachment, instance-vs-class attribute lookup and
+shadowing, calling methods bypassing normal dispatch, and monkey-patching
+a class's method after instances already exist. Verified against actual
+output — genuinely eye-opening file.
+
+```python
+class Simplest:
+    pass
+
+print(type(Simplest))        # <class 'type'>
+print(Simplest.__bases__)     # (<class 'object'>,)
+```
+- **`pass`** — a no-op statement, needed purely because Python's
+  block-based syntax always requires *some* statement inside a
+  `class`/`def`/`if`/etc. body; an empty class still fully works and
+  implicitly inherits from `object` (the root of Python's entire class
+  hierarchy) even without writing `class Simplest(object):`.
+- **`type(SomeClass)` vs `SomeClass.__bases__` are two different
+  relationships.** `type(Simplest)` → `type` — classes are themselves
+  objects with a type too (their **metaclass**; `type` is the default
+  metaclass for every ordinary class — the same `type` you've been using
+  as a function all along). `Simplest.__bases__` → the class's **direct
+  parent classes** (like `__mro__` from `pythonExercises4/zad1.py`, but
+  just the immediate parents, not the full linearized chain).
+  `type(X)` = "what am I an *instance of*"; `X.__bases__` = "what do I
+  *inherit from*" — genuinely different axes.
+
+```python
+Simplest.a = 5          # attach an attribute to the CLASS itself, after the fact
+print(Simplest.a)        # 5
+
+s1 = Simplest()
+s1.b = 10                # attach an attribute to just this INSTANCE
+print(s1.b)               # 10
+print(s1.a)                # 5 — s1 has no own `a`, so lookup FALLS BACK to the class
+print(s1.a is Simplest.a)   # True — genuinely the same object, not a copy
+
+s1.a = 15                 # this creates a NEW instance attribute, SHADOWING the class one
+print(s1.a)                 # 15
+print(Simplest.a)            # 5 — the class attribute is completely untouched!
+
+Simplest.c = 30              # add another class attribute, well AFTER s1 already exists
+print(s1.c)                   # 30 — s1 sees it immediately — lookup is dynamic, not baked in
+```
+- **Classes are mutable objects — you can attach attributes to them (or
+  to individual instances) at any time**, not just inside `__init__`.
+- **Instance attribute lookup falls back to the class** if the instance
+  itself doesn't have that attribute — same fallback idea as LEGB scope
+  lookup, but for attributes: check the instance first, then its class.
+- **Assigning to `instance.attr` never modifies the class** — it creates
+  a brand-new attribute on that *instance specifically*, which then
+  shadows (hides) the class-level one for that instance only. Every
+  other instance (and the class itself) is unaffected — same
+  local-shadows-global shape as scoping, applied to attributes instead.
+- **Class attributes added later are immediately visible to
+  already-existing instances** — attribute lookup happens fresh at
+  access time, not fixed/copied when the instance was created.
+
+```python
+def explode(self):
+    print("bum")
+
+Simplest.explode = explode   # attach a function to the class — it's now a method!
+Simplest.explode(s1)          # "bum" — call it directly on the class, passing self explicitly
+s1.explode()                    # "bum" — the normal way: self is passed automatically
+```
+- **A method is really just a function stored as a class attribute** —
+  attaching one after the class is already defined works exactly like
+  defining it inside the `class` body from the start.
+- **`self` is genuinely just the first positional parameter**, normally
+  supplied automatically by the `instance.method()` call syntax.
+  `Simplest.explode(s1)` proves this by supplying it manually — calling
+  the function straight off the *class*, passing the instance in as the
+  first argument by hand. Both calling styles are equivalent.
+
+```python
+class Samochod:
+    def __init__(self, name):
+        self.name = name
+        self.counter = 0
+    def go(self, distance):
+        self.counter += distance
+        print("jazda")
+
+class Truck(Samochod):
+    def go(self):
+        super().go(50)
+        print('jazda ciezarowka')
+
+tir = Truck('Lambo')
+tir.go(); tir.go()              # normal dispatch → Truck.go() (which calls super().go(50)) → counter=100
+
+Samochod.go(tir, 50)             # BYPASSES Truck's override entirely — calls the parent
+                                    # version directly, no "jazda ciezarowka" print → counter=150
+
+super(Truck, tir).go(150)          # the EXPLICIT super() form (pythonExercises4/zad1.py),
+                                      # used from OUTSIDE any method this time — same effect
+                                      # as Samochod.go(tir, 150), but respects MRO properly
+                                      # rather than hardcoding a class name → counter=300
+```
+- **You can call a specific class's version of a method directly,
+  bypassing a subclass's override entirely**, by calling it off the
+  class itself with the instance passed manually:
+  `Samochod.go(tir, 50)` runs the *parent's* `go`, completely ignoring
+  that `tir`'s actual type (`Truck`) has its own overriding `go`. Normal
+  `tir.go()` dispatch always uses `Truck.go` (the override); calling
+  `Samochod.go(tir, ...)` explicitly names which class's method to run.
+- **`super(Class, instance).method(...)` also works from *outside* any
+  method** (not just inside `__init__` like in
+  `pythonExercises4/zad1.py`) — it produces a proxy that looks up
+  `method` starting *after* `Class` in `instance`'s MRO, achieving the
+  same "skip the override" effect as calling `Samochod.go(tir, ...)`
+  directly, but through the proper MRO-aware mechanism — the difference
+  matters once a hierarchy has more than two levels or multiple
+  inheritance, where hardcoding a class name can silently break.
+
+```python
+def new_go(self, distance):
+    print('nowe go')
+    self.counter += 1000
+
+Samochod.go = new_go     # REPLACE the method on the class, entirely, at runtime
+ferrari.go(500)            # ferrari already existed and had counter=230 — but NOW uses new_go!
+print(ferrari.counter)      # 1230 — +1000, the passed distance (500) is ignored by new_go
+```
+- **Monkey-patching**: reassigning `Samochod.go` to a completely
+  different function replaces the method for the *entire class*, and —
+  critically — this retroactively affects **already-existing instances**
+  too (`ferrari` was created and used long before this line). This works
+  because method lookup is always "check the class's *current*
+  attribute, right now, at call time" — nothing about a method is ever
+  fixed or cached onto an instance when it's created. A dramatic,
+  concrete demonstration of just how dynamic Python's object model
+  really is — the same "attribute lookup is live, not a snapshot"
+  principle from the `Simplest.c = 30` example above, just applied to a
+  method instead of a plain attribute.
+
+## 2026-09-28 — `10 - klasy cz2.py` (university/kolokwium python 2024)
+
+A single class implementing a whole family of dunder methods — makes an
+instance callable, iterable, comparable, and arithmetic-operator-capable
+all at once. Verified against actual output.
+
+```python
+class Callable:
+    def __call__(self, arg):
+        print(str(arg) + ' from call')
+
+c = Callable()
+c('arg1')   # "arg1 from call" — calling the INSTANCE like a function!
+```
+- **`__call__`** — defining this makes instances of the class directly
+  **callable**, `c('arg1')` instead of needing something like
+  `c.run('arg1')`. This is the mechanism behind any "function-like
+  object" in Python.
+
+```python
+def __repr__(self):
+    return 'custom repr'
+def __str__(self):
+    return 'custom str'
+
+print(repr(c))   # 'custom repr'
+print(str(c))     # 'custom str'
+```
+- **`__repr__`/`__str__` are the actual dunders backing the `repr()`/
+  `str()` built-in functions** (already discussed conceptually in
+  `3-lancuchy znakow.py` — this is where that behavior actually comes
+  from for a custom object). Without defining them, `str(obj)`/`print(obj)`
+  falls back to the default `<ClassName object at 0x...>` seen for plain
+  classes like `Simplest` in `9 - klasy cz1.py`.
+
+```python
+def __iter__(self):
+    return self
+
+def __next__(self):
+    self.count += 1
+    if self.count > self.limit:
+        raise StopIteration
+    return self.count ** 2
+
+for x in c:
+    print(x)   # 1, 4, 9, ..., 100 (squares of 1–10)
+```
+- **Hand-implementing the full iterator protocol** (`8 - iteratory.py`/
+  `8 - generatory.py`, done manually instead of via `yield`).
+  **`__iter__`** is called by `iter(obj)`/`for x in obj:` and must return
+  *an iterator*; returning `self` means "I am my own iterator" — only
+  valid because this class *also* implements `__next__`. **`__next__`**
+  is called by `next(obj)` (explicitly, or implicitly on every step of a
+  `for` loop) — same `StopIteration`-to-stop mechanism as a generator.
+  This is genuinely the manual, long-form equivalent of what a
+  `yield`-based generator function does for you automatically.
+
+```python
+def __eq__(self, other):
+    return True
+def __ne__(self, other):
+    return False
+```
+- **`__eq__`/`__ne__`** back `==`/`!=` respectively. Worth knowing: in
+  Python 3, defining only `__eq__` automatically gives you the correctly
+  negated `__ne__` for free — writing `__ne__` explicitly (as done here)
+  is usually redundant, a holdover from Python 2 where that
+  auto-derivation didn't happen.
+
+```python
+def __add__(self, other):      return 5     # backs  c + c2
+def __sub__(self, other):       return 0     # backs  c - c2
+def __mul__(self, other):        return 100   # backs  c * c2
+def __truediv__(self, other):     return -100  # backs  c / c2  (true division specifically)
+def __iadd__(self, other):         return 500   # backs  c += ...
+
+c2 = Callable()
+print(c + c2)   # 5
+print(c - c2)    # 0
+print(c * c2)     # 100
+print(c / c2)      # -100
+c += 100
+print(c)             # 500 !!
+```
+- **A full family of arithmetic dunders**, extending the `__add__`
+  example from `pythonExercises4/zad2.py`: `__sub__` (`-`), `__mul__`
+  (`*`), `__truediv__` (`/` specifically — "true division," as opposed
+  to `__floordiv__` for `//`).
+- **`__iadd__` backs `+=` specifically, distinct from `__add__`.** When a
+  class defines `__iadd__`, `c += 100` calls `c.__iadd__(100)` directly,
+  rather than falling back to computing `c = c.__add__(100)`. This
+  mirrors the general augmented-assignment rule from
+  `5 - zmienne i obiekty.py`: `+=` **rebinds the name** to whatever the
+  operation returns.
+  - **Concrete gotcha this exposes**: `__iadd__` here returns a plain
+    `int` (`500`), *not* `self` (or any `Callable`). Since `+=` always
+    rebinds `c` to whatever `__iadd__` returns, **`c` stops being a
+    `Callable` entirely after this line** — it becomes the literal `int`
+    `500`. Confirmed by the final output: `print(c)` shows `500`, not
+    `'custom str'` — proof that `c`'s custom `__str__` is no longer even
+    in play, because `c` is no longer that kind of object at all. A
+    dramatic, concrete illustration of why a real-world `__iadd__`
+    implementation should almost always mutate `self` and `return self`,
+    not return something unrelated.
+
+## 2026-09-28 — `11 - logging.py` (university/kolokwium python 2024)
+
+The `logging` module — Python's standard replacement for scattering
+`print()` statements everywhere, used constantly for debugging throughout
+these notes. Verified against actual output.
+
+```python
+import logging
+logging.getLogger().setLevel(logging.DEBUG)
+logging.debug('debug')
+logging.info('info')
+logging.warning('warning')
+logging.error('error')
+logging.critical('critical')
+```
+Output:
+```
+DEBUG:root:debug
+INFO:root:info
+WARNING:root:warning
+ERROR:root:error
+CRITICAL:root:critical
+```
+
+- **Five severity levels**, one dedicated function each, in increasing
+  order of seriousness: `debug()` (fine-grained diagnostic detail) →
+  `info()` (general information) → `warning()` (unexpected, but not
+  breaking) → `error()` (a real problem) → `critical()` (serious,
+  likely unrecoverable failure).
+- **Logging has a minimum-severity-to-show threshold, and Python's
+  default is `WARNING`.** Confirmed by running the same five calls
+  *without* `setLevel(...)`: only `warning`/`error`/`critical` printed —
+  `debug`/`info` were silently swallowed, no error at all. This is the
+  actual practical value over `print()`: you can globally dial verbosity
+  up (development) or down (production) without touching or deleting any
+  of the logging calls themselves.
+- **`logging.getLogger()`** (no arguments) returns the **root logger** —
+  the default logger every module uses unless it requests its own named
+  one via `logging.getLogger('name')`. **`.setLevel(logging.DEBUG)`**
+  lowers that logger's threshold to the most permissive level, so
+  everything gets through.
+- **Default output format**: `LEVEL:logger_name:message` (e.g.
+  `DEBUG:root:debug`) — more context for free than a bare
+  `print('debug')` would give, even unconfigured further.
+
+## 2026-09-28 — `11-testy.py` (university/kolokwium python 2024)
+
+`unittest` — Python's built-in automated-testing framework. Verified
+against actual output (ran the commented-out runner lines manually to
+confirm behavior).
+
+```python
+import unittest
+
+class SorteTest(unittest.TestCase):
+    def setUp(self):
+        self.l = [4, 2, 1, 3]
+    def test_sorted_list(self):
+        self.assertEqual(sorted(self.l), [1, 2, 3, 4])
+    def test_sorted_int(self):
+        self.assertRaises(TypeError, sorted, 78)
+```
+
+- **`unittest.TestCase`** — inheritance put to a new use (same pattern as
+  `Bird(Animal)` in `pythonExercises3/zad4.py`): subclassing it gives you
+  a whole toolkit of testing methods (`assertEqual`, `assertRaises`,
+  etc.) and lets the framework auto-discover/run your test methods.
+- **`setUp(self)`** — a special method name `unittest` calls
+  **automatically before every single `test_*` method**, giving each
+  test a fresh, known starting state (here, resetting `self.l`) so tests
+  don't leak state into each other.
+- **Methods named `test_...` are auto-discovered as tests** — purely by
+  naming convention (the `test_` prefix), not special syntax.
+- **`self.assertEqual(actual, expected)`** — asserts two values are equal
+  (`==` under the hood); fails with a clear message showing both values
+  if they don't match, instead of manual `print()`-and-eyeball
+  comparison.
+- **`self.assertRaises(ExceptionType, callable, *args)`** — asserts that
+  calling `callable(*args)` raises `ExceptionType`. `sorted(78)` raises
+  `TypeError` since an `int` isn't iterable (same iterable requirement
+  duck-typing relied on in `pythonExercises3/zad1.py`). Shortcut for a
+  manual `try/except ExceptionType: pass else: fail()` block.
+- **Running tests** (commented out in the file, but confirmed by running
+  manually):
+  ```python
+  suite = unittest.TestLoader().loadTestsFromTestCase(SorteTest)
+  unittest.TextTestRunner(verbosity=2).run(suite)
+  # test_sorted_int (...) ... ok
+  # test_sorted_list (...) ... ok
+  # Ran 2 tests in 0.000s — OK
+  ```
+  `TestLoader().loadTestsFromTestCase(...)` gathers every `test_*` method
+  into a runnable suite; `TextTestRunner(verbosity=2).run(...)` executes
+  them with a detailed per-test report. In practice this is more commonly
+  done via `python -m unittest filename.py` from the command line
+  instead, which is likely why these two lines are commented out here —
+  shown just to demonstrate what happens under the hood.
+
 ## 2026-09-25 — Practice tasks
 
 Self-directed exercises combining concepts from `university/pythonWSEI/`

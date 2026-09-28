@@ -19,6 +19,7 @@ print3(*[1, 2, 3])
 print3(*(1, 2, 3))
 print3(*range(1, 4))
 print3(1, *[2, 3])
+print("----")
 print3(1, c=3, *[2])
 
 def print4(a, b, c, d):

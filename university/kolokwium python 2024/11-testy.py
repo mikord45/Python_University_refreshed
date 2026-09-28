@@ -8,5 +8,5 @@ class SorteTest(unittest.TestCase):
     def test_sorted_int(self):
         self.assertRaises(TypeError, sorted, 78)
 
-# suite = unittest.TestLoader().loadTestsFromTestCase(SorteTest)
-# unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(SorteTest)
+unittest.TextTestRunner(verbosity=2).run(suite)

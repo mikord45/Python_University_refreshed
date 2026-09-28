@@ -71,7 +71,7 @@ print(int)
 
 def create_global():
     global x
-    x =15
+    x = 15
 
 create_global()
 print(x)

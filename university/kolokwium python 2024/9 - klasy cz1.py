@@ -20,6 +20,7 @@ print(Simplest.a)
 # print(s1.c)
 Simplest.c = 30
 print(s1.c)
+print("----")
 
 def explode(self):
     print("bum")
